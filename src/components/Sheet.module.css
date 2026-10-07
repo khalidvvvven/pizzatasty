@@ -1,0 +1,121 @@
+.sheet {
+  /* Phone: bottom sheet. */
+  position: fixed;
+  inset: auto 0 0 0;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(92dvh, 100%);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--c-dough);
+  color: var(--c-ink);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+}
+
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  animation: sheet-up var(--dur-sheet) var(--ease-out) both;
+}
+
+.sheet[data-closing] {
+  animation: sheet-down 220ms var(--ease-out) both;
+}
+
+.sheet::backdrop {
+  background: rgb(31 26 23 / 0.55);
+  animation: fade 240ms var(--ease-out) both;
+}
+
+.sheet[data-closing]::backdrop {
+  animation: fade 220ms var(--ease-out) reverse both;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+@media (min-width: 48em) {
+  .center {
+    inset: 0;
+    margin: auto;
+    width: min(600px, calc(100% - 48px));
+    max-height: min(88dvh, 860px);
+    border-radius: var(--r-lg);
+  }
+
+  .center[open] {
+    animation: pop-in var(--dur-sheet) var(--ease-out) both;
+  }
+
+  .center[data-closing] {
+    animation: pop-out 200ms var(--ease-out) both;
+  }
+
+  .side {
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: min(460px, 100%);
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: var(--r-lg) 0 0 var(--r-lg);
+  }
+
+  .side[open] {
+    animation: slide-in var(--dur-sheet) var(--ease-out) both;
+  }
+
+  .side[data-closing] {
+    animation: slide-out 220ms var(--ease-out) both;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

@@ -1,0 +1,63 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: var(--c-white);
+  color: var(--c-ink);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+}
+
+.placeholder {
+  width: 170px;
+  opacity: 0.5;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.open .dot {
+  background: #2f8f46;
+  box-shadow: 0 0 0 3px rgb(47 143 70 / 0.2);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+.closed .dot {
+  background: var(--c-ink-3);
+}
+
+.red {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--c-white);
+  box-shadow: none;
+}
+
+.red.open .dot {
+  background: #8ef0a5;
+  box-shadow: 0 0 0 3px rgb(142 240 165 / 0.25);
+}
+
+.red.closed .dot {
+  background: var(--c-saffron);
+}
+
+.dark {
+  background: var(--c-oven-2);
+  color: var(--c-cream-on-dark);
+  box-shadow: none;
+}
+
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgb(47 143 70 / 0);
+  }
+}

@@ -1,0 +1,22 @@
+.page {
+  padding-top: var(--sp-6);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.title {
+  font-size: var(--fs-2xl);
+  font-stretch: 75%;
+  text-transform: uppercase;
+}
+
+.lead {
+  color: var(--c-ink-2);
+  font-weight: 600;
+}
