@@ -2,7 +2,7 @@ import type { CheckoutDetails, OrderMode } from './types';
 
 /** Lenient on purpose: accepts local and international formats, rejects obvious typos. */
 export const isValidPhone = (v: string) => {
-  if (!/^[+\d][\d\s().-]*$/.test(v.trim())) return false;
+  if (!/^\+?[\d\s().-]+$/.test(v.trim())) return false;
   const digits = v.replace(/\D/g, '');
   return digits.length >= 8 && digits.length <= 15;
 };

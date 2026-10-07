@@ -1,0 +1,10 @@
+/* Movement only (no fade) so first paint and LCP are never delayed. */
+.enter {
+  animation: enter 360ms var(--ease-out) both;
+}
+
+@keyframes enter {
+  from {
+    transform: translateY(10px);
+  }
+}

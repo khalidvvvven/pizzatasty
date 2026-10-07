@@ -6,3 +6,5 @@ next-env.d.ts
 .env*
 .vercel
 scripts/food-art/preview/
+test-results/
+playwright-report/
