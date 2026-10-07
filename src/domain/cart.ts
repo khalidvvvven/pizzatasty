@@ -1,4 +1,4 @@
-import { indexMenu, unitPrice, type MenuIndex } from './pricing';
+import { groupsFor, indexMenu, unitPrice, validateSelection, type MenuIndex } from './pricing';
 import type { Cents, CartLine, CheckoutDetails, OrderMode, Selection } from './types';
 
 export interface CartState {
@@ -21,7 +21,7 @@ export type CartAction =
   | { type: 'clear' }
   | { type: 'hydrate'; state: CartState };
 
-const MAX_QTY = 20;
+export const MAX_QTY = 20;
 const clampQty = (q: number) => Math.max(1, Math.min(MAX_QTY, Math.round(q)));
 const sameConfig = (a: Omit<Selection, 'quantity'> & { productId: string }, b: Omit<Selection, 'quantity'> & { productId: string }) =>
   a.productId === b.productId &&
@@ -42,8 +42,20 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       }
       return { ...state, lines: [...state.lines, { lineId: newLineId(), ...incoming, quantity: clampQty(incoming.quantity) }] };
     }
-    case 'replace':
-      return { ...state, lines: state.lines.map((l) => (l.lineId === action.lineId ? { ...l, ...action.selection, quantity: clampQty(action.selection.quantity) } : l)) };
+    case 'replace': {
+      const edited = state.lines.find((l) => l.lineId === action.lineId);
+      if (!edited) return state;
+      const updated = { ...edited, ...action.selection, quantity: clampQty(action.selection.quantity) };
+      // Editing a line into the same configuration as another one merges them, exactly like 'add'.
+      const twin = state.lines.find((l) => l.lineId !== edited.lineId && sameConfig(l, updated));
+      if (twin) {
+        return {
+          ...state,
+          lines: state.lines.filter((l) => l.lineId !== edited.lineId).map((l) => (l === twin ? { ...l, quantity: clampQty(l.quantity + updated.quantity) } : l)),
+        };
+      }
+      return { ...state, lines: state.lines.map((l) => (l.lineId === action.lineId ? updated : l)) };
+    }
     case 'quantity':
       return { ...state, lines: state.lines.map((l) => (l.lineId === action.lineId ? { ...l, quantity: clampQty(action.quantity) } : l)) };
     case 'remove':
@@ -87,7 +99,7 @@ export function computeTotals(idx: MenuIndex, state: CartState, delivery: Delive
   const unavailableLineIds: string[] = [];
   for (const line of state.lines) {
     const product = idx.product(line.productId);
-    if (!product || !product.available) {
+    if (!product || !product.available || !product.variants.some((v) => v.id === line.variantId)) {
       unavailableLineIds.push(line.lineId);
       continue;
     }
@@ -122,9 +134,18 @@ export function deserializeCart(raw: string | null, menuIdx: MenuIndex): CartSta
   try {
     const data = JSON.parse(raw) as { v?: number; state?: CartState };
     if (data.v !== STORAGE_VERSION || !data.state || !Array.isArray(data.state.lines)) return null;
-    const lines = data.state.lines.filter(
-      (l) => typeof l.lineId === 'string' && menuIdx.product(l.productId) && Number.isFinite(l.quantity) && Array.isArray(l.optionIds),
-    );
+    // A saved line is kept only if it still makes sense against today's menu: the size and every
+    // option still exist and the selection still satisfies the rules (the menu may have changed).
+    const lines = data.state.lines
+      .filter((l) => {
+        if (typeof l.lineId !== 'string' || !Number.isFinite(l.quantity) || !Array.isArray(l.optionIds)) return false;
+        const product = menuIdx.product(l.productId);
+        if (!product || !product.variants.some((v) => v.id === l.variantId)) return false;
+        const known = new Set(groupsFor(menuIdx, product).flatMap((g) => g.options.map((o) => o.id)));
+        if (!l.optionIds.every((id) => known.has(id))) return false;
+        return validateSelection(menuIdx, product, l).length === 0;
+      })
+      .map((l) => ({ ...l, quantity: clampQty(l.quantity) }));
     const mode: OrderMode = ['dine-in', 'takeaway', 'delivery'].includes(data.state.mode) ? data.state.mode : 'takeaway';
     return { lines, mode, details: emptyDetails };
   } catch {

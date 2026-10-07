@@ -35,8 +35,9 @@ export function startingPrice(idx: MenuIndex, product: Product): Cents {
   );
 }
 
+/** "from" is only shown when the price can actually change (two same-price variants don't count). */
 export const hasPriceRange = (idx: MenuIndex, product: Product) =>
-  product.variants.length > 1 || groupsFor(idx, product).some((g) => g.options.some((o) => o.price > 0));
+  new Set(product.variants.map((v) => v.price)).size > 1 || groupsFor(idx, product).some((g) => g.options.some((o) => o.price > 0));
 
 /** Unit price for a configured product. Unknown variants/options contribute nothing (they're rejected by validate). */
 export function unitPrice(idx: MenuIndex, product: Product, sel: Pick<Selection, 'variantId' | 'optionIds'>): Cents {

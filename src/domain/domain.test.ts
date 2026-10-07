@@ -3,7 +3,7 @@ import { demoMenu } from '@/content/demo/menu';
 import { cartReducer, computeTotals, deserializeCart, emptyDetails, initialCart, serializeCart, type CartState } from './cart';
 import { openStatus, reservationSlots, type WeeklyHours } from './hours';
 import { buildOrderMessage, whatsappUrl } from './order-message';
-import { canQuickAdd, clampSelection, defaultSelection, indexMenu, startingPrice, unitPrice, validateSelection } from './pricing';
+import { canQuickAdd, clampSelection, defaultSelection, hasPriceRange, indexMenu, startingPrice, unitPrice, validateSelection } from './pricing';
 import { searchProducts } from './search';
 import { isValidPhone, validateCheckout } from './validation';
 
@@ -41,6 +41,11 @@ describe('pricing', () => {
 
   it('pre-selects single-choice required options', () => {
     expect(defaultSelection(idx, p('margherita'))).toEqual({ variantId: 'senior', optionIds: ['crust-classic'] });
+  });
+
+  it('shows "from" only when the price can really change', () => {
+    expect(hasPriceRange(idx, p('kebab'))).toBe(false); // two variants, same price, free sauces
+    expect(hasPriceRange(idx, p('margherita'))).toBe(true);
   });
 
   it('offers quick add only when no decision is needed', () => {
@@ -109,6 +114,32 @@ describe('cart', () => {
     expect(deserializeCart('not json', idx)).toBeNull();
     const ghost = JSON.stringify({ v: 1, state: { lines: [{ lineId: 'x', productId: 'deleted-dish', variantId: 'a', optionIds: [], quantity: 1 }], mode: 'takeaway' } });
     expect(deserializeCart(ghost, idx)?.lines).toEqual([]);
+  });
+
+  it('merges an edited line into an identical existing line', () => {
+    let s = add(initialCart, 'margherita', sel('senior', ['crust-classic']));
+    s = add(s, 'margherita', sel('mega', ['crust-classic']));
+    s = cartReducer(s, { type: 'replace', lineId: s.lines[1]!.lineId, selection: sel('senior', ['crust-classic'], 2) });
+    expect(s.lines).toHaveLength(1);
+    expect(s.lines[0]!.quantity).toBe(3);
+  });
+
+  it('drops restored lines that no longer match the menu and clamps quantities', () => {
+    const line = (o: object) => ({ lineId: Math.random().toString(36), quantity: 1, optionIds: [], ...o });
+    const raw = JSON.stringify({
+      v: 1,
+      state: {
+        mode: 'takeaway',
+        lines: [
+          line({ productId: 'margherita', variantId: 'medium', optionIds: ['crust-classic'] }), // renamed size
+          line({ productId: 'tacos-classique', variantId: 'm', optionIds: [] }), // missing required meat + sauce
+          line({ productId: 'margherita', variantId: 'senior', optionIds: ['crust-classic', 'ghost-topping'] }), // unknown option
+          line({ productId: 'eau', variantId: 'std', quantity: 500 }), // absurd quantity
+        ],
+      },
+    });
+    const restored = deserializeCart(raw, idx)!;
+    expect(restored.lines.map((l) => [l.productId, l.quantity])).toEqual([['eau', 20]]);
   });
 
   it('keeps details typed in this tab when another tab syncs the cart', () => {
@@ -196,5 +227,7 @@ describe('validation & search', () => {
     expect(searchProducts(demoMenu.products, demoMenu.categories, 'CREME', 'fr').map((x) => x.id)).toContain('saumon');
     expect(searchProducts(demoMenu.products, demoMenu.categories, 'jamon', 'es').map((x) => x.id)).toContain('reine');
     expect(searchProducts(demoMenu.products, demoMenu.categories, 'zzzz', 'en')).toEqual([]);
+    expect(searchProducts(demoMenu.products, demoMenu.categories, 'oeuf', 'fr').map((x) => x.id)).toEqual(expect.arrayContaining(['orientale', 'salade-thon']));
+    expect(searchProducts(demoMenu.products, demoMenu.categories, "jus d'orange", 'fr').map((x) => x.id)).toEqual(['jus-orange']);
   });
 });

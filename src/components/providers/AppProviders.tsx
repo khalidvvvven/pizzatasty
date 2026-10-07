@@ -50,7 +50,8 @@ interface UiValue {
   openCart: (step?: CartStep) => void;
   closeCart: () => void;
   setCartStep: (s: CartStep) => void;
-  product: { productId: string; lineId?: string } | null;
+  /** `n` increments on every open so each opening gets fresh form state. */
+  product: { productId: string; lineId?: string; n: number } | null;
   openProduct: (productId: string, lineId?: string) => void;
   closeProduct: () => void;
   toast: (t: ToastInput) => void;
@@ -112,6 +113,7 @@ export function AppProviders({ locale, dict, menu, children }: { locale: Locale;
   const [cartStep, setCartStep] = useState<CartStep>('cart');
   const [product, setProduct] = useState<UiValue['product']>(null);
   const toastRef = useRef<(t: ToastInput) => void>(() => {});
+  const productOpens = useRef(0);
   const ui = useMemo<UiValue>(
     () => ({
       cartOpen,
@@ -124,7 +126,7 @@ export function AppProviders({ locale, dict, menu, children }: { locale: Locale;
       closeCart: () => setCartOpen(false),
       setCartStep,
       product,
-      openProduct: (productId, lineId) => setProduct({ productId, lineId }),
+      openProduct: (productId, lineId) => setProduct({ productId, lineId, n: ++productOpens.current }),
       closeProduct: () => setProduct(null),
       toast: (t) => toastRef.current(t),
     }),

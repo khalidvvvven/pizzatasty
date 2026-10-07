@@ -1,7 +1,8 @@
 'use client';
 
 import { Search, X } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { searchProducts } from '@/domain/search';
 import { fill, plural } from '@/i18n';
 import { CartPanel } from '../cart/CartPanel';
@@ -15,9 +16,9 @@ export function MenuBrowser() {
   const { idx } = useCart();
   const { categories, products } = idx.menu;
   const [query, setQuery] = useState('');
-  const deferred = useDeferredValue(query);
-  const searching = deferred.trim().length > 0;
-  const results = useMemo(() => (searching ? searchProducts(products, categories, deferred, locale) : products), [searching, products, categories, deferred, locale]);
+  // Filtering ~30 items is instant, so no deferred value: results always match what was typed.
+  const searching = query.trim().length > 0;
+  const results = useMemo(() => (searching ? searchProducts(products, categories, query, locale) : products), [searching, products, categories, query, locale]);
   const [active, setActive] = useState(categories[0]?.id ?? '');
   const chipsRef = useRef<HTMLDivElement>(null);
   const clickScrolling = useRef(false);
@@ -49,7 +50,8 @@ export function MenuBrowser() {
 
   const goTo = (id: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    setQuery('');
+    // Clear the search synchronously so the target section exists before we scroll to it.
+    if (query) flushSync(() => setQuery(''));
     setActive(id);
     clickScrolling.current = true;
     const target = document.getElementById(id);
@@ -113,7 +115,7 @@ export function MenuBrowser() {
         {searching && results.length === 0 && (
           <div className={styles.noResults}>
             <img src="/food/pizza-choco-banane.svg" alt="" width={120} height={120} />
-            <p className={styles.noResultsTitle}>{fill(dict.menu.noResults, { q: deferred.trim() })}</p>
+            <p className={styles.noResultsTitle}>{fill(dict.menu.noResults, { q: query.trim() })}</p>
             <p>{dict.menu.noResultsHint}</p>
             <button type="button" className="btn btn-dark" onClick={() => setQuery('')}>
               {dict.menu.clearSearch}

@@ -378,33 +378,39 @@ const KINDS = {
     },
   },
   salmon: {
-    rad: 44, size: 1.3, variants: 4, rotate: true, scale: [0.9, 1.1],
-    fx: { b: 3.5, o: 2.4, hi: 0.45, lo: 0.3, ds: 0.35, dsB: 3, dsX: 2, dsY: 3 },
+    // smoked-salmon slice loosely draped in 2-3 overlapping folds: deep coral centre, paler translucent
+    // edges, fine white fat lines, a light crease where each fold turns over the one below
+    rad: 50, size: 1.3, variants: 4, rotate: true, scale: [0.92, 1.08],
+    fx: { b: 3, o: 2, hi: 0.45, hiCol: '#FFF4EC', lo: 0.3, loCol: '#7A2410', ds: 0.4, dsB: 3, dsX: 2.2, dsY: 3.2 },
     draw(ctx, v, rand) {
-      const g = ctx.once('sal-g', (gid) => linearG(gid, [[0, '#FBB08A'], [0.4, '#F38C5E'], [1, '#DC603A']], { x2: 0, y2: 1 }));
-      const L = between(rand, 96, 118), W = between(rand, 32, 40), A = between(rand, 4, 8), ph = rand() * TAU, k = between(rand, 1.4, 2.4);
-      const N = 16, left = [], right = [], cen = [];
-      for (let i = 0; i <= N; i++) {
-        const t = i / N, x = -L / 2 + L * t, y = A * Math.sin(ph + t * k * Math.PI);
-        const dy = (A * Math.cos(ph + t * k * Math.PI) * k * Math.PI) / L, nl = Math.hypot(dy, 1);
-        const nx = -dy / nl, ny = 1 / nl;
-        const w = (W / 2) * (0.62 + 0.38 * Math.sin(Math.PI * t) ** 0.5) * (1 + 0.1 * Math.sin(t * 13 + ph));
-        left.push([x - nx * w, y - ny * w]); right.push([x + nx * w, y + ny * w]); cen.push([x, y, nx, ny, w]);
-      }
-      const outline = `${smooth(left, false)}L${smooth(right.reverse(), false).slice(1)}Z`;
-      let fat = '';
-      for (let i = 1; i < N; i++) {
-        const [x, y, nx, ny, w] = cen[i];
-        fat += `M${P(x + nx * w * 0.78 + 4, y + ny * w * 0.78)}Q${P(x - 1, y)} ${P(x - nx * w * 0.78 + 4, y - ny * w * 0.78)}`;
-      }
-      const side = (i, s) => P(cen[i][0] + s * cen[i][2] * cen[i][4], cen[i][1] + s * cen[i][3] * cen[i][4]);
-      const band = (i0) => `M${side(i0, -1)}L${side(i0 + 2, -1)}L${side(i0 + 2, 1)}L${side(i0, 1)}Z`;
-      const i0 = 2 + Math.floor(rand() * 4), i1 = 9 + Math.floor(rand() * 4);
-      const edge = cen.slice(1, -1).map(([x, y, nx, ny, w]) => P(x - nx * (w - 2.6), y - ny * (w - 2.6))).join('L');
-      return `<path d="${outline}" fill="${g}"/>` +
-        `<path d="${fat}" fill="none" stroke="#FFE3D2" stroke-width="1.4" opacity=".5"/>` +
-        `<path d="${band(i0)}${band(i1)}" fill="#B4482C" opacity=".22"/>` +
-        `<path d="M${edge}" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".45"/>`;
+      const g = ctx.once('sal-g', (gid) => radialG(gid, [[0, '#E9663A'], [0.5, '#F07A4B'], [0.8, '#F89A72'], [0.94, '#FDB898'], [1, '#FFCBB2']], { cx: 0.46, cy: 0.5, r: 0.56 }));
+      const n = 2 + (v < 2 ? 1 : 0), order = v % 2 ? [0, 2, 1] : [...Array(n).keys()];
+      const bend = between(rand, -10, 10);
+      const panels = Array.from({ length: n }, (_, i) => {
+        const t = n === 1 ? 0 : i / (n - 1) - 0.5;
+        return { x: t * (n === 3 ? 74 : 44), y: bend * (1 - 4 * t * t) + between(rand, -3, 3), rx: between(rand, 26, 31), ry: between(rand, 22, 27), rot: between(rand, -24, 24) + (i % 2 ? 8 : -8) };
+      });
+      let out = '';
+      order.filter((i) => i < n).forEach((i, depth) => {
+        const p = panels[i], d = blobXY(rand, 0, 0, p.rx, p.ry, { points: 8, wobble: 0.16 });
+        const clip = ctx.once(`sal-cl${v}-${i}`, (fid) => `<clipPath id="${fid}"><path d="${d}"/></clipPath>`);
+        const tilt = between(rand, 0.35, 0.7) * (i % 2 ? 1 : -1);
+        let fat = '', fat2 = '';
+        for (let x = -p.rx - 12, k = 0; x < p.rx + 12; x += between(rand, 6.5, 9), k++) {
+          const s = `M${r(x - tilt * p.ry)} ${r(-p.ry - 2)}Q${r(x + 5)} 0 ${r(x + tilt * p.ry)} ${r(p.ry + 2)}`;
+          if (k % 3 === 2) fat2 += s; else fat += s;
+        }
+        const tf = `translate(${r(p.x)} ${r(p.y)}) rotate(${Math.round(p.rot)})`;
+        // fold over the slice beneath: soft cast shade, then the panel, then a pale crease along its edge
+        if (depth) out += `<path d="${d}" transform="${tf} translate(2.6 3.6) scale(1.04)" fill="#7A2410" opacity=".22"/><path d="${d}" transform="${tf} translate(1.4 2) " fill="#7A2410" opacity=".18"/>`;
+        out += `<g transform="${tf}"><path d="${d}" fill="${g}"/><g clip-path="${clip}">` +
+          `<path d="${fat}" fill="none" stroke="#FFEAE0" stroke-width="1.35" opacity=".62"/><path d="${fat2}" fill="none" stroke="#FFF4EE" stroke-width=".8" opacity=".5"/>` +
+          `<ellipse cx="0" cy="${r(p.ry * 0.95)}" rx="${r(p.rx * 1.05)}" ry="${r(p.ry * 0.45)}" fill="#B3401E" opacity=".2"/></g>` +
+          `<path d="${d}" fill="none" stroke="#FFD6C4" stroke-width="2.2" opacity=".55"/>` +
+          (depth ? `<path d="${arc(0, 0, p.rx * 0.84, 3.3, 4.6)}" fill="none" stroke="#FFE6DA" stroke-width="2.6" stroke-linecap="round" opacity=".7"/>` : '') +
+          `<ellipse cx="${r(-p.rx * 0.28)}" cy="${r(-p.ry * 0.38)}" rx="${r(p.rx * 0.3)}" ry="${r(p.ry * 0.1)}" transform="rotate(-25 ${r(-p.rx * 0.28)} ${r(-p.ry * 0.38)})" fill="#fff" opacity=".35"/></g>`;
+      });
+      return out;
     },
   },
   dill: {
@@ -623,6 +629,10 @@ const STEPS = {
   /** Lemon zest strips. */
   zest(ctx, o) {
     const { rand } = ctx;
+    if (o.dots) {
+      const pts = scatterInCircle(rand, { cx: CX, cy: CY, radius: RS - 24, count: o.count ?? 20, minDist: 34 }).map((p) => [p.x, p.y]);
+      return `<g filter="${ctx.bev('fx-zest', { b: 0.8, o: 0.6, hi: 0.3, lo: 0.25, ds: 0.4, dsB: 1, dsX: 0.8, dsY: 1.2 })}">${dots(pts, 5.2, '#E8B312')}${dots(pts.map(([x, y]) => [x - 0.9, y - 0.9]), 2.2, '#FFEC82', 0.9)}</g>`;
+    }
     const pts = scatterInCircle(rand, { cx: CX, cy: CY, radius: RS - 20, count: o.count ?? 30, minDist: 26 });
     let d = '';
     for (const p of pts) { const a = rand() * TAU, l = between(rand, 4, 9); d += `M${P(p.x, p.y)}q${P(Math.cos(a) * l * 0.5 + 1.5, Math.sin(a) * l * 0.5 - 1.5)} ${P(Math.cos(a) * l, Math.sin(a) * l)}`; }
@@ -656,45 +666,97 @@ function pizza(id, spec) {
   };
 }
 
-/** Showpiece: margherita-pepperoni with one slice pulled out and cheese strings across the gap. */
+/**
+ * Melted-cheese strand from A to B: thick, melty ends that thin out in the stretched middle,
+ * with a gentle sideways sag. Returns a closed outline path.
+ */
+function strand(ax, ay, bx, by, { we = 7, wm = 2.4, sag = 0 } = {}) {
+  const L = Math.hypot(bx - ax, by - ay), nx = -(by - ay) / L, ny = (bx - ax) / L;
+  const mx = (ax + bx) / 2 + nx * sag, my = (ay + by) / 2 + ny * sag;
+  const left = [], right = [], N = 12;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, u = 1 - t;
+    const x = u * u * ax + 2 * u * t * mx + t * t * bx, y = u * u * ay + 2 * u * t * my + t * t * by;
+    const tx = 2 * u * (mx - ax) + 2 * t * (bx - mx), ty = 2 * u * (my - ay) + 2 * t * (by - my), tl = Math.hypot(tx, ty);
+    const w = (wm + (we - wm) * Math.abs(2 * t - 1) ** 1.7) / 2;
+    left.push([x - (ty / tl) * w, y + (tx / tl) * w]);
+    right.push([x + (ty / tl) * w, y - (tx / tl) * w]);
+  }
+  return { d: `${smooth(left, false)}L${smooth(right.reverse(), false).slice(1)}Z`, mid: [mx, my], nx, ny };
+}
+
+/**
+ * Showpiece: pepperoni margherita with one 1/8 slice pulled out toward the bottom-right.
+ * The slice keeps its own crust and toppings, casts its own shadow, the cut edges are darkened,
+ * the gap shows the shadowed board, and stretchy mozzarella strands bridge the gap.
+ */
 function heroPizza(id, spec) {
   return () => {
     const ctx = context(id);
     const pie = buildPie(ctx, spec);
     const { rand } = ctx;
-    const th = 0.95, half = 0.4, a0 = th - half, a1 = th + half, pull = 30, dx = Math.cos(th) * pull, dy = Math.sin(th) * pull;
-    const far = 420;
-    const wedge = `M${CX} ${CY}L${I(...polar(a0, far))}L${I(...polar(th, far * 1.2))}L${I(...polar(a1, far))}Z`;
+    const th = spec.slice.th, half = Math.PI / 8, a0 = th - half, a1 = th + half, pull = spec.slice.pull;
+    const ux = Math.cos(th), uy = Math.sin(th), dx = ux * pull, dy = uy * pull, T = `${r(dx)} ${r(dy)}`;
+    const wedge = `M${CX} ${CY}` + Array.from({ length: 7 }, (_, i) => `L${I(...polar(a0 + ((a1 - a0) * i) / 6, 470))}`).join('') + 'Z';
     ctx.defs.push(`<g id="${ctx.fid('pie')}">${pie}</g>`);
-    ctx.defs.push(`<clipPath id="${ctx.fid('main')}"><path clip-rule="evenodd" d="M-100 -100H900V900H-100Z${wedge}"/></clipPath><clipPath id="${ctx.fid('slice')}"><path d="${wedge}"/></clipPath>`);
+    ctx.defs.push(`<clipPath id="${ctx.fid('main')}"><path clip-rule="evenodd" d="M-100 -100H900V900H-100Z${wedge}"/></clipPath>` +
+      `<clipPath id="${ctx.fid('slice')}"><path d="${wedge}"/></clipPath><clipPath id="${ctx.fid('disc')}"><use href="${ctx.outer}"/></clipPath>`);
     ctx.defs.push(shadowFilter(id, 18));
-    const cut = `M${CX} ${CY}L${I(...polar(a0, R + 20))}M${CX} ${CY}L${I(...polar(a1, R + 20))}`;
-    const piece = (clip, t) =>
-      `<g transform="translate(${t})"><use href="#${ctx.fid('pie')}" clip-path="url(#${ctx.fid(clip)})"/>` +
-      `<g clip-path="url(#${ctx.fid(clip)})"><path d="${cut}" stroke="#2A0D04" stroke-width="5" opacity=".45" fill="none"/></g></g>`;
-    const shade = (clip, t, o) => `<g transform="translate(${t})" filter="${ctx.blur(7)}" opacity="${o}"><g clip-path="url(#${ctx.fid(clip)})"><use href="${ctx.outer}" fill="#240A02"/></g></g>`;
-    // cheese strings bridging the gap
-    const sg = ctx.once('string', (gid) => linearG(gid, [[0, '#FFF8E4'], [0.6, '#FBE7B8'], [1, '#EBC98A']], { x2: 0, y2: 1 }));
-    const ux = Math.cos(th), uy = Math.sin(th);
-    let strings = '', sshadow = '';
-    for (const [ae, side] of [[a0, -1], [a1, 1]]) {
-      for (const f of side < 0 ? [0.38, 0.56, 0.72] : [0.3, 0.5, 0.66]) {
-        const rho = R * f + between(rand, -10, 10);
-        const px = CX + Math.cos(ae) * rho - ux * 8, py = CY + Math.sin(ae) * rho - uy * 8;
-        const qx = px + dx + ux * 16, qy = py + dy + uy * 16;
-        const nx = -uy, ny = ux, we = between(rand, 3, 5), wm = between(rand, 1, 2), sag = between(rand, -5, 5);
-        const mx = (px + qx) / 2 + nx * sag, my = (py + qy) / 2 + ny * sag;
-        const d = `M${P(px + nx * we, py + ny * we)}Q${P(mx + nx * wm, my + ny * wm)} ${P(qx + nx * we, qy + ny * we)}L${P(qx - nx * we, qy - ny * we)}Q${P(mx - nx * wm, my - ny * wm)} ${P(px - nx * we, py - ny * we)}Z`;
-        strings += `<path d="${d}"/>`;
-        sshadow += `<path d="${d}" transform="translate(4 6)"/>`;
+    const url = (k) => `url(#${ctx.fid(k)})`;
+    const cut = `M${CX} ${CY}L${I(...polar(a0, R + 14))}M${CX} ${CY}L${I(...polar(a1, R + 14))}`;
+    // inward normals of the slice along each cut edge (the main pie's are the opposite)
+    const inS = [[-Math.sin(a0), Math.cos(a0)], [Math.sin(a1), -Math.cos(a1)]];
+
+    // cut-edge treatment, kept inside both the piece and the pizza disc (nothing leaks onto the board)
+    const edges = (clip, lit) => `<g clip-path="${url(clip)}"><g clip-path="${url('disc')}" fill="none">` +
+      `<path d="${cut}" stroke="#3A0A03" stroke-width="18" opacity="${lit ? 0.38 : 0.55}" filter="${ctx.blur(4)}"/>` +
+      `<path d="${cut}" stroke="#3E0C03" stroke-width="3.4" opacity=".7"/></g></g>`;
+    const piece = (clip, t, lit) => `<g transform="translate(${t})"><use href="#${ctx.fid('pie')}" clip-path="${url(clip)}"/>${edges(clip, lit)}</g>`;
+    const drop = (clip, t, o, b) => `<g transform="translate(${t})" opacity="${o}"><g clip-path="${url(clip)}"><use href="${ctx.outer}" fill="#240A02" filter="${ctx.blur(b)}"/></g></g>`;
+
+    // mozzarella strands across the gap: each rises out of a melted lip oozing over both cut edges
+    const mozz = ctx.once('mozz', (gid) => radialG(gid, [[0, '#FFFBEF'], [0.5, '#FFF1D2'], [0.85, '#F8DCA2'], [1, '#EDC27E']], { cx: 0.4, cy: 0.36, r: 0.72 }));
+    const sg = ctx.once('strand', (gid) => linearG(gid, [[0, '#FFF8E6'], [0.45, '#FCEBC2'], [1, '#EDC077']], { x1: 0, y1: 0, x2: 1, y2: 1 }));
+    let strands = '', lips = '', shine = '';
+    // melted lips: the cheese layer drawn out over the cut edge in a few places on both pieces
+    for (const [k, rho0, rho1] of spec.slice.ooze) {
+      const ae = k ? a1 : a0, [nx, ny] = inS[k], ex = Math.cos(ae), ey = Math.sin(ae);
+      for (const side of [1, -1]) {
+        const ox = side < 0 ? dx : 0, oy = side < 0 ? dy : 0, N = 6, outer = [], inner = [];
+        const p1 = rand() * TAU, p2 = rand() * TAU;
+        for (let i = 0; i <= N; i++) {
+          const t = i / N, rho = rho0 + (rho1 - rho0) * t, bulge = Math.sin(Math.PI * t) ** 0.7;
+          const over = (2.5 + 2 * Math.sin(p1 + t * 7)) * bulge, depth = (6.5 + 3 * Math.sin(p2 + t * 5)) * bulge + 1;
+          outer.push([CX + ox + ex * rho + side * nx * over, CY + oy + ey * rho + side * ny * over]);
+          inner.push([CX + ox + ex * rho - side * nx * depth, CY + oy + ey * rho - side * ny * depth]);
+        }
+        lips += `<path d="${smooth([...outer, ...inner.reverse()])}"/>`;
       }
     }
-    const body = contactShadow(id, { cx: CX + 16, cy: CY + 24, rx: R + 14, ry: R + 4, opacity: 0.45 }) +
-      shade('main', '5 9', 0.6) + shade('slice', `${r(dx + 5)} ${r(dy + 9)}`, 0.6) +
-      piece('main', '0 0') + piece('slice', `${r(dx)} ${r(dy)}`) +
-      `<g fill="#3A1406" opacity=".35" filter="${ctx.blur(2)}">${sshadow}</g>` +
-      `<g fill="${sg}" filter="${ctx.bev('fx-string', { b: 1.2, o: 0.8, hi: 0.5, hiCol: '#FFFFFF', lo: 0.25, loCol: '#8A5A1C' })}">${strings}</g>`;
-    return svgDoc({ defs: defsOf(ctx), body: `<g transform="translate(-12 -14)">${body}</g>` });
+    for (const [k, rho, lean, we, wm] of spec.slice.strings) {
+      const ae = k ? a1 : a0, [nx, ny] = inS[k], ex = Math.cos(ae), ey = Math.sin(ae);
+      const ax = CX + ex * rho - nx * 3, ay = CY + ey * rho - ny * 3;
+      const rb = rho - pull * Math.cos(half) * lean;
+      const bx = CX + ex * rb + nx * 3 + dx, by = CY + ey * rb + ny * 3 + dy;
+      const s = strand(ax, ay, bx, by, { we, wm, sag: between(rand, -4, 4) });
+      strands += `<path d="${s.d}"/>`;
+      // a thinner filament peeling off beside the main strand
+      const o = we * 0.38 * (k ? -1 : 1);
+      strands += `<path d="${strand(ax + ex * o, ay + ey * o, bx + ex * o * 1.4, by + ey * o * 1.4, { we: we * 0.5, wm: 1.4, sag: between(rand, 3, 6) * (k ? -1 : 1) }).d}"/>`;
+      shine += `M${P(ax + (bx - ax) * 0.25 - 1.2, ay + (by - ay) * 0.25 - 1.2)}Q${P(s.mid[0] - 1, s.mid[1] - 1)} ${P(ax + (bx - ax) * 0.75 - 1.2, ay + (by - ay) * 0.75 - 1.2)}`;
+    }
+
+    // the pizza's contact shadow is thinner inside the gap (light reaches the board there)
+    ctx.defs.push(`<mask id="${ctx.fid('gap')}" maskUnits="userSpaceOnUse" x="-100" y="-100" width="1000" height="1000"><rect x="-100" y="-100" width="1000" height="1000" fill="#fff"/><path d="${wedge}" fill="#000" opacity=".42" filter="${ctx.blur(5)}"/></mask>`);
+    const body = `<g mask="${url('gap')}">${contactShadow(id, { cx: CX + 16, cy: CY + 24, rx: R + 14, ry: R + 4, opacity: 0.45 })}</g>` +
+      contactShadow(id, { cx: r(CX + dx * 1.2 + ux * R * 0.55 + 8), cy: r(CY + dy * 1.2 + uy * R * 0.55 + 12), rx: 150, ry: 120, opacity: 0.3 }) +
+      // the board under the gap, in the pizza's shadow
+      drop('main', '6 10', 0.32, 8) + drop('slice', `${r(dx + 8)} ${r(dy + 13)}`, 0.7, 9) +
+      piece('main', '0 0', false) + piece('slice', T, true) +
+      `<g fill="#2A0C03" opacity=".42" transform="translate(6 10)" filter="${ctx.blur(3.5)}">${strands}</g>` +
+      `<g filter="${ctx.bev('fx-string', { b: 2.2, o: 1.3, hi: 0.65, hiCol: '#FFFFFF', lo: 0.32, loCol: '#A0601A', ds: 0.3, dsB: 2, dsX: 1.5, dsY: 2.5, dsCol: '#3A0C04' })}"><g fill="${mozz}">${lips}</g><g fill="${sg}">${strands}</g></g>` +
+      `<path d="${shine}" fill="none" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round" opacity=".75"/>`;
+    return svgDoc({ defs: defsOf(ctx), body: `<g transform="translate(${spec.slice.shift})">${body}</g>` });
   };
 }
 
@@ -775,8 +837,8 @@ export const art = {
     base: 'creme',
     steps: [
       ['layer', { kind: 'salmon', count: 6, minDist: 150, overlap: 0.7 }],
-      ['layer', { kind: 'dill', count: 9, minDist: 70, overlap: 0.4 }],
-      ['zest', { count: 30 }],
+      ['layer', { kind: 'dill', count: 10, minDist: 70, overlap: 0.4 }],
+      ['zest', { count: 22, dots: true }],
     ],
   }),
   'pizza-choco-banane': pizza('pizza-choco-banane', {
@@ -790,6 +852,13 @@ export const art = {
   }),
   'hero-pizza': heroPizza('hero-pizza', {
     base: 'tomato', char: 20, blisters: 8, outline: 0.55,
+    // slice: centre angle, pull distance, final re-centring; ooze [edge 0|1, from, to radius] melted lips on the cut;
+    // strings [edge, radius, lean, end width, mid width] mozzarella strands across the gap
+    slice: {
+      th: 0.82, pull: 80, shift: '-14 -20',
+      ooze: [[0, 98, 146], [0, 182, 214], [1, 96, 150], [1, 178, 214]],
+      strings: [[0, 122, 0.7, 19, 5.2], [0, 198, 0.62, 14, 3.6], [1, 124, 0.75, 21, 5.6], [1, 196, 0.65, 15, 3.8]],
+    },
     steps: [
       ['cheese', { count: 11, r: [44, 68], minDist: 100 }],
       ['oil', { count: 4 }],

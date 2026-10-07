@@ -24,6 +24,18 @@ const addDays = (iso: string, n: number) => {
 };
 const weekdayOf = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay();
 
+/** Slots still bookable on `date`: on the current day, only those at least 30 minutes away. */
+function remainingSlots(date: string, today: string): string[] {
+  const all = reservationSlots(restaurant.hours, weekdayOf(date));
+  if (date !== today) return all;
+  const { minutes } = localClock(new Date(), restaurant.timeZone);
+  return all.filter((s) => {
+    const [h, m] = s.split(':').map(Number);
+    const slotMin = (h ?? 0) * 60 + (m ?? 0);
+    return slotMin >= minutes + 30 || slotMin < 6 * 60; // after-midnight slots belong to tonight
+  });
+}
+
 export function ReservationForm() {
   const { locale, dict } = useI18n();
   const t = dict.reservation;
@@ -38,26 +50,28 @@ export function ReservationForm() {
   const [today, setToday] = useState('');
   const successRef = useRef<HTMLHeadingElement>(null);
 
-  // Client-only values: today's date and the ?guests= shortcut from the homepage.
+  const [tick, setTick] = useState(0);
+
+  // Client-only values: today's date, the first date that still has slots, and ?guests= from the homepage.
   useEffect(() => {
     const d = todayAtRestaurant();
     setToday(d);
-    setDate(d);
+    const firstOpen = Array.from({ length: restaurant.reservation.daysAhead + 1 }, (_, i) => addDays(d, i)).find((day) => remainingSlots(day, d).length > 0);
+    setDate(firstOpen ?? d);
     const g = Number(new URLSearchParams(window.location.search).get('guests'));
     if (Number.isInteger(g) && g >= 1) setGuests(Math.min(g, restaurant.reservation.maxGuests));
+    // Re-evaluate today's remaining slots as time passes.
+    const id = window.setInterval(() => {
+      setTick((n) => n + 1);
+      setToday(todayAtRestaurant());
+    }, 60_000);
+    return () => window.clearInterval(id);
   }, []);
 
-  const slots = useMemo(() => {
-    if (!date) return [];
-    const all = reservationSlots(restaurant.hours, weekdayOf(date));
-    if (date !== today) return all;
-    const { minutes } = localClock(new Date(), restaurant.timeZone);
-    return all.filter((s) => {
-      const [h, m] = s.split(':').map(Number);
-      const slotMin = (h ?? 0) * 60 + (m ?? 0);
-      return slotMin >= minutes + 30 || slotMin < 6 * 60; // after-midnight slots belong to tonight
-    });
-  }, [date, today]);
+  const allSlots = useMemo(() => (date ? reservationSlots(restaurant.hours, weekdayOf(date)) : []), [date]);
+  // `tick` is a dependency on purpose: it re-runs this every minute so passed times disappear.
+  const slots = useMemo(() => (date ? remainingSlots(date, today) : []), [date, today, tick]);
+  const maxDate = today ? addDays(today, restaurant.reservation.daysAhead) : '';
 
   useEffect(() => {
     if (time && !slots.includes(time)) setTime('');
@@ -67,8 +81,8 @@ export function ReservationForm() {
   if (!name.trim()) errors.name = t.errors.required;
   if (!phone.trim()) errors.phone = t.errors.required;
   else if (!isValidPhone(phone)) errors.phone = t.errors.phone;
-  if (!date || (today && date < today)) errors.date = t.errors.date;
-  if (!time) errors.time = t.errors.time;
+  if (!date || (today && (date < today || date > maxDate))) errors.date = t.errors.date;
+  if (!time || !slots.includes(time)) errors.time = t.errors.time;
   const errorCount = Object.keys(errors).length;
   const shown = (f: Field) => (submitted ? errors[f] : undefined);
 
@@ -94,7 +108,10 @@ export function ReservationForm() {
     setNote('');
   };
 
-  const longDate = date ? new Intl.DateTimeFormat(intlLocale(locale), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)) : '';
+  const showYear = !!date && !!today && date.slice(0, 4) !== today.slice(0, 4);
+  const longDate = date
+    ? new Intl.DateTimeFormat(intlLocale(locale), { weekday: 'long', day: 'numeric', month: 'long', ...(showYear ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`))
+    : '';
   const guestsLabel = plural(locale, guests, { one: t.guestsValue_one, other: t.guestsValue_other });
 
   if (status === 'done') {
@@ -159,7 +176,7 @@ export function ReservationForm() {
             className={styles.input}
             value={date}
             min={today || undefined}
-            max={today ? addDays(today, restaurant.reservation.daysAhead) : undefined}
+            max={maxDate || undefined}
             onChange={(e) => setDate(e.target.value)}
             aria-invalid={!!shown('date')}
             aria-describedby={shown('date') ? 'res-date-err' : undefined}
@@ -187,7 +204,7 @@ export function ReservationForm() {
         {!date ? (
           <p className={styles.muted}>{t.pickDateFirst}</p>
         ) : slots.length === 0 ? (
-          <p className={styles.muted}>{t.closedThatDay}</p>
+          <p className={styles.muted}>{allSlots.length === 0 ? t.closedThatDay : t.noSlotsLeftToday}</p>
         ) : (
           <div className={styles.slotGrid}>
             {slots.map((s, i) => (

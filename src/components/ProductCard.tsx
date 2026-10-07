@@ -2,6 +2,7 @@
 
 import { Check, Flame, Leaf, Plus, Sparkles, Star } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { MAX_QTY } from '@/domain/cart';
 import { canQuickAdd, defaultSelection, hasPriceRange, startingPrice } from '@/domain/pricing';
 import type { Badge, Product } from '@/domain/types';
 import { fill } from '@/i18n';
@@ -27,7 +28,7 @@ export function BadgeChip({ badge }: { badge: Badge }) {
  */
 export function ProductCard({ product, layout = 'row', headingLevel = 3 }: { product: Product; layout?: 'row' | 'tile'; headingLevel?: 2 | 3 }) {
   const { locale, dict, money } = useI18n();
-  const { idx, dispatch } = useCart();
+  const { idx, dispatch, state } = useCart();
   const { openProduct, toast, openCart } = useUi();
   const [justAdded, setJustAdded] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -42,6 +43,11 @@ export function ProductCard({ product, layout = 'row', headingLevel = 3 }: { pro
 
   const quickAdd = () => {
     const sel = defaultSelection(idx, product);
+    const twin = state.lines.find((l) => l.productId === product.id && l.variantId === sel.variantId && !l.note && [...l.optionIds].sort().join() === [...sel.optionIds].sort().join());
+    if (twin && twin.quantity >= MAX_QTY) {
+      toast({ message: fill(dict.product.maxPerItem, { n: MAX_QTY }) });
+      return;
+    }
     dispatch({ type: 'add', productId: product.id, selection: { ...sel, quantity: 1 } });
     setJustAdded(true);
     window.clearTimeout(timer.current);

@@ -25,6 +25,17 @@ export function CartSheet() {
     if (cartStep === 'review' && !ref) setRef(newOrderRef());
   }, [cartStep, ref]);
 
+  // Leaving the "sent" screen by any route (X, Esc, backdrop, buttons) ends that checkout:
+  // the next order gets a new reference and starts from the cart step.
+  useEffect(() => {
+    if (cartOpen || cartStep !== 'sent') return;
+    const t = window.setTimeout(() => {
+      setRef(null);
+      setCartStep('cart');
+    }, 260);
+    return () => window.clearTimeout(t);
+  }, [cartOpen, cartStep, setCartStep]);
+
   const stepIndex = STEPS.indexOf(cartStep);
   const back = cartStep === 'details' ? 'cart' : cartStep === 'review' ? 'details' : null;
 
@@ -58,7 +69,7 @@ export function CartSheet() {
       {cartStep === 'cart' && <CartStepView />}
       {cartStep === 'details' && <DetailsStep />}
       {cartStep === 'review' && ref && <ReviewStep orderRef={ref} />}
-      {cartStep === 'sent' && ref && <SentStep orderRef={ref} onDone={() => setRef(null)} />}
+      {cartStep === 'sent' && ref && <SentStep orderRef={ref} />}
     </Sheet>
   );
 }
@@ -102,9 +113,21 @@ function CartStepView() {
 
 const AUTOCOMPLETE: Record<CheckoutField | 'addressExtra', string> = { table: 'off', name: 'name', phone: 'tel', address: 'street-address', addressExtra: 'address-line2' };
 
+/** Same rule as the cart step's Continue button, re-checked wherever an order can move forward. */
+function useCheckoutBlock() {
+  const { dict, money } = useI18n();
+  const { totals } = useCart();
+  const { minimumOrder } = restaurant.delivery;
+  if (totals.itemCount === 0) return dict.cart.empty;
+  if (totals.unavailableLineIds.length) return dict.cart.unavailableLine;
+  if (totals.belowDeliveryMinimum) return fill(dict.cart.belowMinimum, { min: money(minimumOrder), missing: money(minimumOrder - totals.subtotal) });
+  return null;
+}
+
 function DetailsStep() {
   const { locale, dict } = useI18n();
   const { state, dispatch } = useCart();
+  const block = useCheckoutBlock();
   const { setCartStep } = useUi();
   const [submitted, setSubmitted] = useState(false);
   const summaryRef = useRef<HTMLParagraphElement>(null);
@@ -117,6 +140,7 @@ function DetailsStep() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (block) return;
     setSubmitted(true);
     if (errorCount) {
       const first = fields.find((f) => errors[f]);
@@ -203,7 +227,15 @@ function DetailsStep() {
       </div>
       <div className={styles.foot}>
         <CartTotals />
-        <button type="submit" className="btn btn-primary btn-lg btn-block">
+        {block && (
+          <p className={styles.blockNote} role="status">
+            {block}{' '}
+            <button type="button" className={styles.textBtn} onClick={() => setCartStep('cart')}>
+              {dict.checkout.edit}
+            </button>
+          </p>
+        )}
+        <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={!!block}>
           {dict.checkout.review}
         </button>
       </div>
@@ -215,6 +247,14 @@ function ReviewStep({ orderRef }: { orderRef: string }) {
   const { locale, dict } = useI18n();
   const { state, totals, idx } = useCart();
   const { setCartStep, toast } = useUi();
+  const block = useCheckoutBlock();
+  const detailsInvalid = Object.keys(validateCheckout(state.mode, state.details)).length > 0;
+
+  // The cart or mode can change in another tab or via the back arrow: never send an invalid order.
+  useEffect(() => {
+    if (block) setCartStep('cart');
+    else if (detailsInvalid) setCartStep('details');
+  }, [block, detailsInvalid, setCartStep]);
   const message = buildOrderMessage({ idx, cart: state, totals, ref: orderRef, restaurantName: restaurant.name, staffLocale: restaurant.staffLocale, customerLocale: locale, currency: restaurant.currency });
   const configured = !!restaurant.whatsappNumber;
 
@@ -228,6 +268,7 @@ function ReviewStep({ orderRef }: { orderRef: string }) {
   };
 
   const send = () => {
+    if (block || detailsInvalid) return;
     // Only a real, configured number ever opens WhatsApp. Otherwise: clearly labelled demo state.
     if (configured) window.open(whatsappUrl(restaurant.whatsappNumber!, message), '_blank', 'noopener');
     setCartStep('sent');
@@ -273,20 +314,17 @@ function ReviewStep({ orderRef }: { orderRef: string }) {
   );
 }
 
-function SentStep({ orderRef, onDone }: { orderRef: string; onDone: () => void }) {
+function SentStep({ orderRef }: { orderRef: string }) {
   const { locale, dict } = useI18n();
   const { dispatch } = useCart();
-  const { closeCart, setCartStep } = useUi();
+  const { closeCart } = useUi();
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => headingRef.current?.focus(), []);
 
+  // Closing resets the checkout (see CartSheet); "new order" also empties the cart.
   const finish = (clear: boolean) => {
     if (clear) dispatch({ type: 'clear' });
     closeCart();
-    window.setTimeout(() => {
-      setCartStep('cart');
-      onDone();
-    }, 260);
   };
 
   return (

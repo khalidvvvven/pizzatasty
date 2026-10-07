@@ -126,6 +126,7 @@ export const fr = {
     addedToast: '{name} ajouté au panier',
     updatedToast: '{name} mis à jour',
     viewCart: 'Voir le panier',
+    maxPerItem: 'Maximum {n} par article : quantité ajustée.',
     fixErrors: 'Il manque un choix.',
   },
   cart: {
@@ -210,6 +211,7 @@ export const fr = {
     submit: 'Envoyer la demande',
     sending: 'Envoi…',
     closedThatDay: 'Le restaurant est fermé ce jour-là. Choisissez une autre date.',
+    noSlotsLeftToday: 'Plus de créneau disponible aujourd’hui. Choisissez une autre date.',
     pickDateFirst: 'Choisissez d’abord une date.',
     errors: {
       required: 'Ce champ est obligatoire.',

@@ -86,6 +86,20 @@
   gap: var(--sp-2);
 }
 
+.blockNote {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--c-tomato-soft);
+  color: var(--c-tomato-strong);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.blockNote .textBtn {
+  min-height: 32px;
+  color: inherit;
+}
+
 /* Lines */
 .lines {
   list-style: none;

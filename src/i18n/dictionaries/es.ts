@@ -128,6 +128,7 @@ export const es: Dictionary = {
     addedToast: '{name} añadido al carrito',
     updatedToast: '{name} actualizado',
     viewCart: 'Ver carrito',
+    maxPerItem: 'Máximo {n} por artículo: cantidad ajustada.',
     fixErrors: 'Falta una elección.',
   },
   cart: {
@@ -212,6 +213,7 @@ export const es: Dictionary = {
     submit: 'Enviar solicitud',
     sending: 'Enviando…',
     closedThatDay: 'El restaurante cierra ese día. Elige otra fecha.',
+    noSlotsLeftToday: 'Ya no quedan horas disponibles hoy. Elige otra fecha.',
     pickDateFirst: 'Elige primero una fecha.',
     errors: {
       required: 'Este campo es obligatorio.',

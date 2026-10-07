@@ -1,7 +1,8 @@
 'use client';
 
 import { Info, X } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
+import { MAX_QTY } from '@/domain/cart';
 import { clampSelection, defaultSelection, groupsFor, limitsFor, unitPrice, validateSelection } from '@/domain/pricing';
 import type { Product } from '@/domain/types';
 import { fill, plural } from '@/i18n';
@@ -16,15 +17,11 @@ export function ProductSheet() {
   const { idx } = useCart();
   const product = target ? idx.product(target.productId) : undefined;
 
-  // Keep the last product rendered while the sheet plays its exit animation.
-  const [shown, setShown] = useState<{ product: Product; lineId?: string; n: number } | null>(null);
-  const opens = useRef(0);
-  useEffect(() => {
-    if (product) {
-      opens.current += 1;
-      setShown({ product, lineId: target?.lineId, n: opens.current });
-    }
-  }, [product, target?.lineId]);
+  // Derived during render (not in an effect) so the new product is already in the dialog when
+  // showModal() runs and focus lands inside it. The last one stays rendered for the exit animation.
+  const last = useRef<{ product: Product; lineId?: string; n: number } | null>(null);
+  if (target && product && last.current?.n !== target.n) last.current = { product, lineId: target.lineId, n: target.n };
+  const shown = last.current;
 
   return (
     <Sheet open={!!product} onClose={closeProduct} labelledBy="product-sheet-title">
@@ -45,6 +42,7 @@ function ProductForm({ product, lineId }: { product: Product; lineId?: string })
   const [quantity, setQuantity] = useState(initial.quantity);
   const [note, setNote] = useState(initial.note ?? '');
   const [showErrors, setShowErrors] = useState(false);
+  const submitted = useRef(false);
   const uid = useId();
 
   const groups = useMemo(() => groupsFor(idx, product), [idx, product]);
@@ -75,13 +73,21 @@ function ProductForm({ product, lineId }: { product: Product; lineId?: string })
       document.getElementById(`${uid}-grp-${errors[0]!.groupId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       return;
     }
+    if (submitted.current) return; // one activation = one add, even on a fast double-click
+    submitted.current = true;
     const selection = { variantId, optionIds, quantity, note: note.trim() || undefined };
+    // Adding to an identical line can hit the per-line cap: say so instead of silently dropping items.
+    const sameKey = (ids: string[]) => [...ids].sort().join();
+    const twin = state.lines.find(
+      (l) => l.lineId !== editing?.lineId && l.productId === product.id && l.variantId === variantId && (l.note ?? '') === (selection.note ?? '') && sameKey(l.optionIds) === sameKey(optionIds),
+    );
+    const capped = (twin?.quantity ?? 0) + quantity > MAX_QTY;
     if (editing) {
       dispatch({ type: 'replace', lineId: editing.lineId, selection });
-      toast({ message: fill(dict.product.updatedToast, { name }) });
+      toast({ message: capped ? fill(dict.product.maxPerItem, { n: MAX_QTY }) : fill(dict.product.updatedToast, { name }) });
     } else {
       dispatch({ type: 'add', productId: product.id, selection });
-      toast({ message: fill(dict.product.addedToast, { name }), action: { label: dict.product.viewCart, onClick: () => openCart() } });
+      toast({ message: capped ? fill(dict.product.maxPerItem, { n: MAX_QTY }) : fill(dict.product.addedToast, { name }), action: { label: dict.product.viewCart, onClick: () => openCart() } });
     }
     closeProduct();
   };

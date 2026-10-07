@@ -1,8 +1,19 @@
 import type { Category, Locale, Product } from './types';
 
-/** Lowercase and strip accents so "creme" finds "Crème" and "jamon" finds "jamón". */
+/**
+ * Lowercase, strip accents and fold ligatures/punctuation so "creme" finds "Crème", "oeuf" finds
+ * "Œuf" and "jus d'orange" (straight apostrophe) finds "Jus d’orange".
+ */
 export const normalize = (s: string) =>
-  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  s
+    .toLowerCase()
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 
 export function searchProducts(products: Product[], categories: Category[], query: string, locale: Locale): Product[] {
   const tokens = normalize(query).split(/\s+/).filter(Boolean);

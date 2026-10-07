@@ -24,20 +24,32 @@ export function Sheet({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const openedAt = useRef(0);
+  const pressStartedOnBackdrop = useRef(false);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) {
+    if (open && dialog.open && dialog.hasAttribute('data-closing')) {
+      // Reopened during the exit animation: cancel the close (its timer was cleared with the effect).
       dialog.removeAttribute('data-closing');
+      dialog.inert = false;
+      openedAt.current = performance.now();
+    } else if (open && !dialog.open) {
+      dialog.removeAttribute('data-closing');
+      dialog.inert = false;
+      openedAt.current = performance.now();
       dialog.showModal();
     } else if (!open && dialog.open) {
-      // Play the exit animation, then close (immediately when motion is reduced).
+      // Play the exit animation, then close (immediately when motion is reduced). While it plays the
+      // sheet is inert, so a double-click can't add an item twice or act on a closing sheet.
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (reduce) return dialog.close();
       dialog.setAttribute('data-closing', '');
+      dialog.inert = true;
       const done = () => {
         dialog.removeAttribute('data-closing');
+        dialog.inert = false;
         dialog.close();
       };
       const t = window.setTimeout(done, 220);
@@ -54,9 +66,15 @@ export function Sheet({
         e.preventDefault();
         onClose();
       }}
+      onPointerDown={(e) => {
+        pressStartedOnBackdrop.current = e.target === e.currentTarget;
+      }}
       onClick={(e) => {
-        // A click on the backdrop lands on the <dialog> element itself.
-        if (e.target === e.currentTarget) onClose();
+        // A click on the backdrop lands on the <dialog> element itself. Only close when the press also
+        // started there (a text selection dragged outside must not close it), and ignore the click that
+        // may land on the fresh backdrop right after a double-click opened the sheet.
+        const onBackdrop = e.target === e.currentTarget && pressStartedOnBackdrop.current;
+        if (onBackdrop && performance.now() - openedAt.current > 300) onClose();
       }}
     >
       <div className={styles.inner}>{children}</div>
