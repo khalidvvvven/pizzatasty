@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Phase 0 complete · **Phase 1 (audit of the existing site) blocked — source not yet provided** |
+| **Status** | Phase 0 complete · Live site identified: **https://www.pizzatasty.online/** · **Phase 1 (audit) blocked: this environment's network allowlist denies the host** (§0) |
 | **Date** | 2026-10-07 |
 | **Inputs needed** | See [intake.md](./intake.md) |
 | **Related** | [ADR-0001 — Stack and content platform](../adr/0001-stack-and-content-platform.md) (Proposed) |
@@ -15,6 +15,9 @@ labelled with how much of it rests on evidence:
 - **PROPOSED**: design or architecture direction. Doesn't depend on the old code and is open to revision.
 - **BLOCKED**: needs the existing site or code. The section lists exactly what I will check once I have it.
 
+The existing product is the live site **https://www.pizzatasty.online/**, confirmed
+by you on 2026-10-07. This repository is the new build and does **not** represent it.
+
 ---
 
 ## 0. What was inspected, and what was found
@@ -26,10 +29,39 @@ labelled with how much of it rests on evidence:
 | Connected Vercel account | **196 projects, none whose name or alias contains `pizz`/`tasty`**, and no custom domains. The team is on the **Hobby** plan. | Vercel API: `/v9/projects` (all pages), `/v5/domains`, `/v2/teams/{id}` |
 | Public web search for "Pizza Tasty" | Only **unrelated** businesses named "Tasty Pizza": Mexborough and Redcar (UK, Just Eat), Schaarbeek (Belgium, Uber Eats), Omaha (US app). None matches a FR/EN/ES site with admin features. **I did not audit any of them.** | Web search, 2026-10-07 |
 
-**Conclusion:** the existing Pizza Tasty website and code aren't anywhere this
-session can reach. Per rule 1 of the brief ("inspect before rebuilding"), I haven't
-invented a system map or audit findings. The sections that need the old project are
-marked **BLOCKED**, and each one says exactly what I'll check and how.
+### 0.1 Attempts to inspect https://www.pizzatasty.online/ (2026-10-07)
+
+| Method | Result | Evidence |
+|---|---|---|
+| Direct HTTPS, `www` and apex | ❌ The **egress proxy** refused the connection: `Host not in allowlist: www.pizzatasty.online`. The site itself never saw the request. | `curl` → `CONNECT tunnel failed, response 403`; proxy log `connect_rejected` for `www.pizzatasty.online:443` and `pizzatasty.online:443` |
+| Direct HTTP, `www` and apex | ❌ Same policy: `x-deny-reason: host_not_allowed` | `curl -D -` |
+| WebFetch tool | ❌ `EGRESS_BLOCKED`: same allowlist | Tool error |
+| Headless Chromium (Playwright) through the proxy | ❌ `net::ERR_TUNNEL_CONNECTION_FAILED`. The same browser setup loads an allowed host (github.com) with full TLS verification, so the tooling is fine | `tools/site-audit` proxy check |
+| Internet Archive (`archive.org`, `web.archive.org`), certificate logs (`crt.sh`) | ❌ Blocked by the same allowlist | Proxy log `connect_rejected` |
+| Google PageSpeed Insights API | ⚠️ Reachable, but the keyless daily quota is 0 (`429 RESOURCE_EXHAUSTED`). Needs an API key | API response |
+| **DNS** | ✅ `www.pizzatasty.online` → CNAME `ef2f763401c9d862.vercel-dns-017.com` → `216.198.79.1`, `64.29.17.1`. Apex → `216.198.79.1`. Nameservers `launch1/2.spaceship.net` | `getent hosts`; Vercel domain-config API |
+| Connected Vercel account | ✅/❌ The domain is attached to a Vercel account **this session is not connected to** (`You don't have access to "pizzatasty.online"`). So I can't read the deployment's files through Vercel either | Vercel API `/v5/domains/pizzatasty.online` |
+| Search engine (this session's web-search tool) | No pages from `pizzatasty.online` itself for `site:pizzatasty.online` or `"pizzatasty.online"`. This tool's index isn't Google's, so it's **no evidence** either way about Google indexing | Web search, 2026-10-07 |
+
+**VERIFIED about the current site:**
+- It is **hosted on Vercel**. DNS points `www` at Vercel's DNS target.
+- **DNS is managed at Spaceship**.
+- The Vercel project lives in **a Vercel account other than the connected one**.
+
+Nothing else about it is verified yet.
+
+**What unblocks the audit.** Any one of these works:
+1. **Add `www.pizzatasty.online` and `pizzatasty.online` to this cloud environment's allowed domains.** Steps: https://code.claude.com/docs/en/cloud-environments#network-access. A new session may be needed for the change to apply.
+2. Give this session access to the site's source: the GitHub repository, or a connection to the Vercel account that owns the project.
+3. Send a saved copy ("Save page as… → complete") plus screenshots. This gives a weaker audit: no network, console or interaction evidence.
+
+The capture harness in [`tools/site-audit`](../../tools/site-audit/README.md) is
+built and self-tested, so option 1 leads straight to a full evidence capture.
+
+**Conclusion:** the existing site is now identified, but this session can't reach it.
+Per rule 1 of the brief ("inspect before rebuilding"), I haven't invented a system
+map or audit findings. The sections that need the old project stay marked
+**BLOCKED**, and each one says exactly what I'll check and how.
 
 Three findings come straight from the evidence above and matter now:
 
@@ -52,13 +84,14 @@ Three findings come straight from the evidence above and matter now:
 
 **KNOWN — VERIFIED**
 - Everything in §0.
+- Live site: https://www.pizzatasty.online/, hosted on Vercel (a different account from the connected one), DNS at Spaceship (§0.1).
 
 **ASSUMED (to be confirmed, never shipped as fact)**
 - One restaurant location. If there are several, the URLs, schema and hours model change.
 - Customers mostly arrive on phones, from Google Maps, Instagram/WhatsApp shares or a QR code on the table. This assumption drives the mobile-first priority, so it's worth validating with real analytics if you have any.
 
 **UNKNOWN — must come from you (nothing below will be invented)**
-- URL, hosting, tech stack and source of the current site.
+- Tech stack, source code and admin mechanism of the current site. The URL and hosting are now known (§0.1).
 - Country, city and address; currency; time zone; phone; WhatsApp number.
 - Opening hours; delivery area and fees; minimum order; payment methods accepted.
 - Real menu: categories, items, descriptions, sizes, extras, prices, allergens, dietary tags.
@@ -75,6 +108,7 @@ The capabilities below are **STATED**. The *how* column fills in once I can read
 
 | Area | Stated capability | To verify in code |
 |---|---|---|
+| Hosting | — | **VERIFIED:** Vercel, in an account not connected to this session; DNS at Spaceship (§0.1). Framework still unknown |
 | Pages | Landing page, menu, reservation, contact | Page inventory, URL structure, which are separate documents vs. JS-rendered views |
 | Components | Product cards, category controls, cart | Reuse vs. copy-paste, naming, structure |
 | Menu data | Categories, dishes, prices, featured flags, (sizes?) | Where it lives (inline HTML, JS array, JSON, DB, Firebase…), shape, how admin edits reach customers |
@@ -209,7 +243,9 @@ not just a taste judgement.
 
 ## 10. Performance plan — how we establish a baseline
 
-No numbers will be claimed until they're measured. The procedure:
+No numbers will be claimed until they're measured. Steps 2–4 are automated by
+[`tools/site-audit`](../../tools/site-audit/README.md) (`--lighthouse`), so the old site and the
+rebuild are measured the same way. The procedure:
 
 1. **Field data first.** Query the PageSpeed Insights API (it includes Chrome UX Report data) for the origin and the home and menu URLs. Small restaurant sites often have **too little traffic for CrUX data**. If so, we record "no field data" rather than substituting lab numbers.
 2. **Lab, repeatable.**
@@ -732,6 +768,6 @@ composition, not a separate design exercise.
 
 Everything is listed in **[intake.md](./intake.md)**. The three that unblock the most:
 
-1. **The existing site:** its URL, plus the source code (zip, repo, or hosting access).
-2. **Country, city, currency, and the WhatsApp number** orders go to.
-3. **The real menu** in any form (photo of the printed menu, spreadsheet, admin export).
+1. **Network access to https://www.pizzatasty.online/** for this environment (§0.1, option 1), or the site's source code or the Vercel account that owns it.
+2. **Country, city, currency, and the WhatsApp number** orders go to. The live site may answer some of these; anything it doesn't show stays UNKNOWN.
+3. **The real menu** in any form (photo of the printed menu, spreadsheet, admin export), unless the live site's menu turns out to be complete and current.

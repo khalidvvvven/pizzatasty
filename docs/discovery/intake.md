@@ -12,11 +12,13 @@ transcript, photos, spreadsheet. "Don't know" and "doesn't apply" are useful ans
 
 ## A. The existing project (unblocks the whole audit)
 
-- [ ] **A1. Live URL** of the current Pizza Tasty website.
-- [ ] **A2. Source code.** Push it to a branch here *after* a secret scan, send a zip, or give me the repo name. If it's in one of your other GitHub repos, tell me which one and I'll add it to the session.
-- [ ] **A3. Hosting.** Where is it deployed (Netlify, GitHub Pages, shared hosting, Vercel under another account…)? Who owns the domain?
+- [x] **A1. Live URL:** https://www.pizzatasty.online/ (confirmed 2026-10-07).
+- [ ] **A1b. Network access.** Add `www.pizzatasty.online` and `pizzatasty.online` to this cloud environment's allowed domains: session title bar → cloud environment menu → Edit → Network access → Allowed domains, keeping **Allow package managers** ticked ([docs](https://code.claude.com/docs/en/cloud-environments#network-access)). This is the single step that unblocks the audit. A new session may be needed for it to apply.
+- [ ] **A2. Source code.** Which GitHub repository deploys pizzatasty.online? If it's one of yours, I can add it to the session read-only. Otherwise push it to a branch here *after* a secret scan, or send a zip.
+- [ ] **A3. Hosting.** VERIFIED via DNS: **Vercel**, in an account *other than* the one connected to this session, with DNS managed at **Spaceship**. Still needed: which Vercel account or team owns the project, which plan it's on, and who owns the domain registration.
 - [ ] **A4. Admin.** How do staff log in today, and where are menu edits saved?
 - [ ] **A5. Data export** of the current menu from the admin, if possible.
+- [ ] **A6b. PageSpeed Insights API key** (optional, free from Google Cloud). Lets me pull Google's own lab measurements and any real-user (CrUX) data for the site.
 - [ ] **A6. Analytics.** Any Google Analytics, Search Console, or Google Business Profile access? Even rough numbers (orders per week via WhatsApp) help set a baseline.
 
 ## B. Business facts

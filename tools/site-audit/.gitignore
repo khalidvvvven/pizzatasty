@@ -1,0 +1,4 @@
+node_modules/
+# Raw captures can contain third-party bundles, cookies or keys shipped by the audited
+# site. Never commit them to this public repository; commit curated findings instead.
+captures/

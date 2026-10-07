@@ -8,7 +8,10 @@
 
 ## Context
 
-- **The current code hasn't been seen.** This repo is empty, and the existing site couldn't be found on the connected GitHub or Vercel accounts. So this ADR can't yet judge whether the existing stack deserves to stay. Option A below exists for exactly that judgement.
+- **The current code hasn't been seen.** The existing product is https://www.pizzatasty.online/.
+  - DNS shows it's **hosted on Vercel**, in an account this session isn't connected to.
+  - This environment's network allowlist blocks the site itself (discovery §0.1).
+  - So this ADR can't yet judge whether the existing stack deserves to stay. Option A below exists for exactly that judgement.
 - **The product needs:**
   - A fast, crawlable, multilingual (fr/en/es) menu.
   - A client-side cart with variants and modifiers.
