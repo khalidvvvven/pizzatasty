@@ -10,6 +10,7 @@ import { rng, between, blobPath, contactShadow, shadowFilter, grainFilter, svgDo
 const n0 = (v) => Math.round(v);
 const r1 = (v) => Math.round(v * 10) / 10;
 const nums = (a) => a.join(' ').replace(/ -/g, '-');
+const fd = (v) => (Math.abs(v) >= 6 ? n0(v) : r1(v));
 const int = (d) => d.replace(/-?\d+\.\d+/g, (m) => String(Math.round(+m)));
 
 /* ------------------------------------------------------------------ geometry */
@@ -87,7 +88,7 @@ function place(rand, P, { n, minD, u = [-0.9, 0.9], v = [0.1, 0.9], avoid = [] }
 
 /** Many short round-capped strokes in ONE path: cheap dots/capsules (texture, seeds, crumbs). */
 const dots = (list, color, w, extra = '') =>
-  list.length ? `<path d="${list.map(([x, y, dx = 0.4, dy = 0]) => `M${n0(x)} ${n0(y)}l${nums([r1(dx), r1(dy)])}`).join('')}" stroke="${color}" stroke-width="${w}" stroke-linecap="round" fill="none"${extra}/>` : '';
+  list.length ? `<path d="${list.map(([x, y, dx = 0.4, dy = 0]) => `M${n0(x)} ${n0(y)}l${nums([fd(dx), fd(dy)])}`).join('')}" stroke="${color}" stroke-width="${w}" stroke-linecap="round" fill="none"${extra}/>` : '';
 
 function defsFor(id) {
   const m = new Map();
@@ -122,8 +123,8 @@ const gloss = (list, w = 3, op = 0.8) => dots(list, '#FFFFFF', w, ` opacity="${o
 /* ------------------------------------------------------------------ palettes */
 
 const BREAD = {
-  tortilla: { top: [[0, '#F9DDA0'], [0.4, '#EBB86A'], [0.8, '#CC8A3E'], [1, '#A9652A']], stripe: '#4E2309', stripeW: 11, gap: 40, angle: -24, hi: '#FFEAB8', sheen: 0.4 },
-  panini: { top: [[0, '#FBE6B4'], [0.4, '#EDC780'], [0.8, '#D39A50'], [1, '#AE6E32']], stripe: '#40190A', stripeW: 12, gap: 34, angle: -34, hi: '#FFF1C8', sheen: 0.45 },
+  tortilla: { top: [[0, '#FDE7B0'], [0.35, '#F4C677'], [0.75, '#E1A052'], [1, '#C07A34']], stripe: '#5A2508', stripeW: 12, gap: 42, angle: -22, hi: '#FFEFC4', sheen: 0.3 },
+  panini: { top: [[0, '#FEEFC6'], [0.35, '#F5D592'], [0.75, '#E2AE62'], [1, '#C58842']], stripe: '#4A1C06', stripeW: 13, gap: 36, angle: -32, hi: '#FFF4D2', sheen: 0.32 },
 };
 
 /* ------------------------------------------------------------------ top faces */
@@ -138,9 +139,8 @@ function grillStripes(D, G, b) {
     lines.push([px - dx * span, py - dy * span, 2 * dx * span, 2 * dy * span]);
     his.push([px - dx * span + nx * b.stripeW * 1.1, py - dy * span + ny * b.stripeW * 1.1, 2 * dx * span, 2 * dy * span]);
   }
-  return dots(lines, '#7A3A12', b.stripeW * 2.4, ` opacity=".22" filter="${D.blur(4)}"`) +
+  return dots(lines, '#A0521A', b.stripeW * 2.6, ` opacity=".3" filter="${D.blur(4)}"`) +
     dots(lines, b.stripe, b.stripeW, ` opacity=".82" filter="${D.blur(1.4)}"`) +
-    dots(lines, '#2A0E03', b.stripeW * 0.35, ' opacity=".35"') +
     dots(his, b.hi, 3, ' opacity=".4"');
 }
 
@@ -161,36 +161,35 @@ function gratin(c, G, k) {
   const P = () => { const u = between(rand, -0.85, 0.85), t = rand(); const y0 = G.yt(u), y1 = G.A[1] + (y0 - G.A[1]) * 0.15; return [u * G.hw * (0.35 + 0.65 * t) + G.A[0] * (1 - t) * 0.6, y1 + (y0 - y1) * t]; };
   let tex = '';
   // browned patches
-  for (let j = 0; j < 9; j++) { const [x, y] = P(); tex += `<path d="${int(blobPath(rand, x, y, between(rand, 14, 30), { points: 7, wobble: 0.5 }))}" fill="#C0702A" opacity=".5" filter="${D.blur(3)}"/>`; }
-  const spots = Array.from({ length: 26 }, () => { const [x, y] = P(); return [x, y, between(rand, -3, 3), between(rand, -1, 1)]; });
+  for (let j = 0; j < 14; j++) { const [x, y] = P(); tex += `<path d="${int(blobPath(rand, x, y, between(rand, 14, 32), { points: 6, wobble: 0.5 }))}" fill="${j % 3 ? '#C06422' : '#8E3E10'}" opacity=".7" filter="${D.blur(3.5)}"/>`; }
+  const spots = Array.from({ length: 14 }, () => { const [x, y] = P(); return [x, y, between(rand, -3, 3), between(rand, -1, 1)]; });
   tex += dots(spots, '#8E4314', 6, ` opacity=".55" filter="${D.blur(1.2)}"`) + dots(spots.slice(0, 12), '#5E2A0C', 2.5, ' opacity=".6"');
   // bubbles: rim shadow, pale dome, white glint
-  const bub = Array.from({ length: 30 }, () => { const [x, y] = P(); return [x, y, between(rand, 3, 7)]; });
-  tex += bub.map(([x, y, rr]) => `<circle cx="${n0(x)}" cy="${n0(y)}" r="${r1(rr)}" fill="#FFE9A6" stroke="#B8662A" stroke-width="1.4" stroke-opacity=".55"/>`).join('') +
-    gloss(bub.map(([x, y, rr]) => [x - rr * 0.35, y - rr * 0.4, 0.3, 0]), 2.4, 0.9);
+  const bub = Array.from({ length: 13 }, () => { const [x, y] = P(); return [x, y, between(rand, 5, 10)]; });
+  tex += `<g fill="#FCD467" stroke="#A85A1E" stroke-width="1.6" stroke-opacity=".5">${bub.map(([x, y, rr]) => `<ellipse cx="${n0(x)}" cy="${n0(y)}" rx="${n0(rr)}" ry="${n0(rr * 0.7)}"/>`).join('')}</g>` +
+    gloss(bub.map(([x, y, rr]) => [x - rr * 0.4, y - rr * 0.3, rr * 0.3, 0]), 2.4, 0.85);
   svg += `<g clip-path="${D.clip(`grc${k}`, [s])}">${tex}</g>`;
   return svg;
 }
 
 function topFace(c, o, G, sTop) {
   const { D, rand } = c, b = BREAD[o.bread];
-  let svg = use(sTop, D.rad(`top-${o.bread}`, b.top, { cx: 0.32, cy: 0.18, r: 0.95 }), ` filter="${D.grain(o.bread, { freq: 0.85, amount: 0.14 })}"`);
-  let inner = grillStripes(D, G, b);
-  // toasted freckles + flour / blistered spots
+  let svg = use(sTop, D.rad(`top-${o.bread}`, b.top, { cx: 0.32, cy: 0.18, r: 0.95 }), ` filter="${D.grain(o.bread, { freq: 0.85, amount: 0.07 })}"`);
   const P = () => { const u = between(rand, -0.95, 0.95), t = Math.sqrt(rand()); return [u * G.hw * t + G.A[0] * (1 - t), G.A[1] + (G.yt(u) - G.A[1]) * t]; };
-  inner += dots(Array.from({ length: 34 }, () => { const [x, y] = P(); return [x, y, between(rand, -2, 2), 0]; }), '#9A5420', 3, ' opacity=".35"');
-  inner += dots(Array.from({ length: 26 }, () => { const [x, y] = P(); return [x, y, between(rand, -3, 3), 0]; }), '#FFF3D2', 2.4, ' opacity=".45"');
+  let inner = '';
+  // grill stripes, toasted freckles + flour / blistered spots (hidden under a gratin)
+  if (!o.gratin) inner += grillStripes(D, G, b) + dots(Array.from({ length: 20 }, () => { const [x, y] = P(); return [x, y, between(rand, -2, 2), 0]; }), '#9A5420', 3, ' opacity=".35"');
+  if (!o.gratin) inner += dots(Array.from({ length: 16 }, () => { const [x, y] = P(); return [x, y, between(rand, -3, 3), 0]; }), '#FFF3D2', 2.4, ' opacity=".45"');
   // pillow shading: dark rim inside the edge, sheen on the upper-left
-  inner += use(sTop, 'none', ` stroke="#4A1F06" stroke-width="22" stroke-opacity=".38" filter="${D.blur(7)}"`);
+  inner += use(sTop, 'none', ` stroke="#7A3A0E" stroke-width="20" stroke-opacity=".3" filter="${D.blur(7)}"`);
   const sx = (G.L[0] + G.A[0]) / 2 + G.hw * 0.12, sy = (G.L[1] + G.A[1]) / 2 + 6;
-  inner += `<ellipse cx="${n0(sx)}" cy="${n0(sy)}" rx="${n0(G.hw * 0.42)}" ry="${n0(Math.abs(G.A[1] - G.L[1]) * 0.24 + 8)}" transform="rotate(-14 ${n0(sx)} ${n0(sy)})" fill="${D.rad('sheen', [[0, '#fff', b.sheen], [0.6, '#fff', b.sheen * 0.3], [1, '#fff', 0]])}"/>`;
+  inner += `<ellipse cx="${n0(sx)}" cy="${n0(sy)}" rx="${n0(G.hw * 0.42)}" ry="${n0(Math.abs(G.A[1] - G.L[1]) * 0.24 + 8)}" transform="rotate(-14 ${n0(sx)} ${n0(sy)})" fill="${D.rad('sheen', [[0, '#FFF6DA', b.sheen], [0.6, '#FFF6DA', b.sheen * 0.3], [1, '#FFF6DA', 0]])}"/>`;
   if (o.sugar) {
-    const sug = Array.from({ length: 260 }, () => P());
-    inner += dots(sug, '#FFFFFF', 2.2, ' opacity=".75"') + dots(sug.slice(0, 120).map(([x, y]) => [x + 7, y + 3]), '#FFFFFF', 3.4, ' opacity=".35"');
+    const sug = Array.from({ length: 170 }, () => P());
+    inner += dots(sug, '#FFFFFF', 2.4, ' opacity=".8"') + dots(sug.slice(0, 70).map(([x, y]) => [x + 9, y + 4]), '#FFFFFF', 4, ' opacity=".35"');
     inner += use(sTop, '#FFFDF6', ' opacity=".18"');
   }
   svg += `<g clip-path="${D.clip(`tc${o.k}`, [sTop])}">${inner}</g>`;
-  if (o.gratin) svg += gratin(c, G, o.k);
   return svg;
 }
 
@@ -211,7 +210,7 @@ function fries(rand, list, w = 15) {
   }
   const p = (l, col, ww, ex = '') => dots(l, col, ww, ex).replace('stroke-linecap="round"', 'stroke-linecap="butt"');
   return dots(edge.map(([x, y, dx, dy]) => [x + 2, y + 3, dx, dy]), '#6A2E08', w, ' opacity=".28"') +
-    p(edge, '#D08F34', w) + p(body, '#FBD36A', w * 0.72) + p(tip, '#A9581A', w, ' opacity=".35"') + p(hl, '#FFF3C2', 3, ' opacity=".9"');
+    p(edge, '#D98A26', w) + p(body, '#FFD458', w * 0.72) + p(tip, '#A9581A', w, ' opacity=".35"') + p(hl, '#FFF3C2', 3, ' opacity=".9"');
 }
 
 /** Fries cut across: small rounded squares. */
@@ -221,17 +220,21 @@ const fryEnds = (D, list) => list.map(([x, y, s, a]) =>
 
 function chickenChunks(c, pts, [r0, r1_]) {
   const { D, rand } = c;
-  const fill = D.rad('chick', [[0, '#FCE3AC'], [0.45, '#EDB868'], [0.82, '#C9813A'], [1, '#9C5726']], { cx: 0.36, cy: 0.3, r: 0.75 });
+  const fill = D.rad('chick', [[0, '#FBD796'], [0.35, '#E9A957'], [0.75, '#C9792F'], [1, '#97501C']], { cx: 0.32, cy: 0.26, r: 0.8 });
   let svg = '';
   const sear = [], fib = [];
   for (const [x, y] of pts) {
     const rr = between(rand, r0, r1_);
-    const d = int(blobPath(rand, x, y, rr, { points: 7, wobble: 0.34 }));
-    svg += `<path d="${d}" fill="${fill}"/>`;
-    for (let j = 0; j < 3; j++) sear.push([x + between(rand, -rr, rr * 0.7), y + between(rand, -rr * 0.3, rr * 0.6), between(rand, -6, 6), between(rand, -1.5, 1.5)]);
-    for (let j = 0; j < 2; j++) fib.push([x + between(rand, -rr * 0.6, rr * 0.2), y + between(rand, -rr * 0.5, rr * 0.3), between(rand, 6, 11), between(rand, -2, 2)]);
+    const nC = rand() < 0.5 ? 4 : 5, a0 = rand() * 6.28, poly = [];
+    for (let j = 0; j < nC; j++) {
+      const a = a0 + (j / nC) * 6.28 + between(rand, -0.25, 0.25), rad = rr * between(rand, 0.8, 1.15);
+      poly.push([x + Math.cos(a - 0.22) * rad * 0.93, y + Math.sin(a - 0.22) * rad * 0.8], [x + Math.cos(a + 0.22) * rad * 0.93, y + Math.sin(a + 0.22) * rad * 0.8]);
+    }
+    svg += `<path d="${smooth(poly)}" fill="${fill}"/>`;
+    sear.push([x + rr * 0.1, y + rr * 0.55, rr * 0.55, -rr * 0.2]);
+    fib.push([x - rr * 0.55, y - rr * 0.15, rr * 0.7, -rr * 0.12], [x - rr * 0.4, y + rr * 0.15, rr * 0.55, -rr * 0.1]);
   }
-  return `<g filter="${D.bevel('chunk')}">${svg}</g>` + dots(sear, '#9A5020', 4, ' opacity=".55"') + dots(fib, '#FFF1CC', 1.6, ' opacity=".7"');
+  return `<g filter="${D.bevel('chunk', { hi: 0.75, lo: 0.45 })}">${svg}</g>` + dots(sear, '#A4521C', 3.4, ' opacity=".45"') + dots(fib, '#FFF4D4', 1.6, ' opacity=".6"');
 }
 
 function beefMince(c, pts, rr) {
@@ -239,8 +242,8 @@ function beefMince(c, pts, rr) {
   let base = '';
   const crumbs = [[], [], []];
   for (const [x, y] of pts) {
-    base += `<path d="${int(blobPath(rand, x, y, rr * between(rand, 0.85, 1.15), { points: 8, wobble: 0.5 }))}" fill="#5A2810"/>`;
-    for (let j = 0; j < 12; j++) {
+    base += `<path d="${int(blobPath(rand, x, y, rr * between(rand, 0.85, 1.15), { points: 6, wobble: 0.5 }))}" fill="#5A2810"/>`;
+    for (let j = 0; j < 8; j++) {
       const a = rand() * 6.28, d = Math.sqrt(rand()) * rr;
       crumbs[j % 3].push([x + Math.cos(a) * d, y + Math.sin(a) * d * 0.85, between(rand, -1.5, 1.5), between(rand, -1, 1)]);
     }
@@ -267,9 +270,9 @@ function sauceRibbons(c, P, n, col, hi) {
   const { rand } = c;
   let svg = '';
   for (let j = 0; j < n; j++) {
-    const v = between(rand, 0.2, 0.85), u0 = between(rand, -0.95, 0.2), len = between(rand, 0.35, 0.8);
-    const pts = Array.from({ length: 5 }, (_, q) => { const [x, y] = P(u0 + (len * q) / 4, v); return [x, y + between(rand, -6, 6)]; });
-    const d = smooth(pts, false), w = between(rand, 8, 13);
+    const v = between(rand, 0.25, 0.8), u0 = between(rand, -0.9, 0.4), len = between(rand, 0.18, 0.4);
+    const pts = Array.from({ length: 5 }, (_, q) => { const [x, y] = P(u0 + (len * q) / 4, v); return [x, y + between(rand, -8, 8)]; });
+    const d = smooth(pts, false), w = between(rand, 14, 20);
     svg += `<path d="${d}" fill="none" stroke="${col}" stroke-width="${n0(w)}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${hi}" stroke-width="2.6" stroke-linecap="round" transform="translate(-1 -${n0(w * 0.25)})" opacity=".85"/>`;
   }
   return svg;
@@ -281,8 +284,9 @@ function tacoFilling(c, o, I) {
   const P = (u, v) => [u * I.hw, I.yt(u) + (I.yb(u) - I.yt(u)) * v];
   let svg = '';
   const fr = [];
-  for (let j = 0; j < o.fries; j++) { const [x, y] = P(between(rand, -0.9, 0.9), between(rand, 0.18, 0.88)); fr.push({ x, y, a: between(rand, -0.32, 0.32), l: between(rand, 44, 80) }); }
-  svg += fries(rand, fr, 15);
+  for (let j = 0; j < o.fries; j++) { const [x, y] = P(between(rand, -0.9, 0.9), between(rand, 0.18, 0.88)); fr.push({ x, y, a: between(rand, -0.3, 0.3), l: between(rand, 60, 104) }); }
+  svg += sauceRibbons(c, P, 1, '#FCC94A', '#FFF3C8');
+  svg += fries(rand, fr, 20);
   const meatPts = place(rand, P, { n: o.meat.reduce((s, m) => s + m.n, 0), minD: o.meatGap ?? 34, u: [-0.94, 0.94], v: [0.18, 0.82] });
   let i0 = 0;
   for (const m of o.meat) {
@@ -292,8 +296,8 @@ function tacoFilling(c, o, I) {
     else if (m.t === 'beef') svg += beefMince(c, pts, m.r);
     else svg += merguez(c, pts, m.r);
   }
-  svg += fryEnds(D, place(rand, P, { n: o.ends, minD: 26, avoid: meatPts, v: [0.2, 0.85] }).map(([x, y]) => [x, y, between(rand, 12, 15), between(rand, -20, 20)]));
-  svg += sauceRibbons(c, P, o.ribbons ?? 4, '#FFD15A', '#FFF6D2');
+  svg += fryEnds(D, place(rand, P, { n: o.ends, minD: 26, avoid: meatPts, v: [0.2, 0.85] }).map(([x, y]) => [x, y, between(rand, 16, 20), between(rand, -20, 20)]));
+  svg += sauceRibbons(c, P, o.ribbons ?? 2, '#FFD660', '#FFF8DC');
   return svg;
 }
 
@@ -301,7 +305,7 @@ function tacoFilling(c, o, I) {
 function paniniFilling(c, o, G) {
   const { D, rand } = c;
   const nzT = noise1(rand, 3, 9), nzB = noise1(rand, 3, 9);
-  const band = (u) => { const t = G.yt(u), b = G.yb(u), th = b - t; return [t + th * 0.36 + nzT(u) * 3, t + th * 0.74 + nzB(u) * 4]; };
+  const band = (u) => { const t = G.yt(u), b = G.yb(u), th = b - t; return [t + th * 0.27 + nzT(u) * 3, t + th * 0.77 + nzB(u) * 4]; };
   const pts = [];
   for (let j = 0; j <= 20; j++) { const u = -1.02 + (2.04 * j) / 20; pts.push([u * G.hw, band(u)[0]]); }
   for (let j = 20; j >= 0; j--) { const u = -1.02 + (2.04 * j) / 20; pts.push([u * G.hw, band(u)[1]]); }
@@ -323,7 +327,7 @@ function paniniFilling(c, o, G) {
     } else {
       // chicken slices and tomato rounds embedded in melted cheese
       const xs = Array.from({ length: 9 }, (_, j) => -0.9 + j * 0.225 + between(rand, -0.03, 0.03));
-      const chick = D.lin('pchick', [[0, '#FBE8C4'], [0.55, '#EECB92'], [1, '#C98E4E']]);
+      const chick = D.lin('pchick', [[0, '#FCE2AE'], [0.45, '#EDB86C'], [1, '#C98038']]);
       const tom = D.lin('ptom', [[0, '#F7765A'], [0.5, '#E2422B'], [1, '#B42718']]);
       let ch = '', tm = '';
       const seeds = [], marks = [];
@@ -344,13 +348,18 @@ function paniniFilling(c, o, G) {
   } else {
     // chocolate & banana
     svg += use(sBand, D.lin('choc', [[0, '#7A4020'], [0.5, '#4E2412'], [1, '#2E1308']], [0, n0(yMid - 16), 0, n0(yMid + 16)], true));
-    const bananas = Array.from({ length: 8 }, (_, j) => P(-0.86 + j * 0.245 + between(rand, -0.03, 0.03), between(rand, 0.42, 0.58)));
-    const ban = D.rad('ban', [[0, '#FFF8D6'], [0.6, '#F7E7A6'], [1, '#E2C46E']], { cx: 0.4, cy: 0.35, r: 0.7 });
+    const bananas = Array.from({ length: 6 }, (_, j) => P(-0.8 + j * 0.32 + between(rand, -0.04, 0.04), between(rand, 0.44, 0.56)));
+    const ban = D.rad('ban', [[0, '#FFF4C4'], [0.55, '#F8E294'], [0.85, '#EBC966'], [1, '#C9A044']], { cx: 0.42, cy: 0.38, r: 0.66 });
     const [, ya] = P(0, 0.05), [, yb] = P(0, 0.95), bh = (yb - ya) / 2;
-    svg += `<g filter="${D.bevel('ban', { b: 2, o: 1.2, lo: 0.3 })}">${bananas.map(([x, y]) => `<ellipse cx="${n0(x)}" cy="${n0(y)}" rx="${n0(G.hw * 0.075)}" ry="${n0(bh * 0.92)}" fill="${ban}"/>`).join('')}</g>`;
-    svg += dots(bananas.flatMap(([x, y]) => [[x - 4, y - 2], [x + 3, y - 3], [x, y + 3]]), '#9C7A3A', 2.4, ' opacity=".8"');
+    svg += `<g filter="${D.bevel('ban', { b: 2, o: 1.2, lo: 0.3 })}">${bananas.map(([x, y]) => `<ellipse cx="${n0(x)}" cy="${n0(y)}" rx="${n0(G.hw * 0.1)}" ry="${n0(bh * 0.9)}" fill="${ban}"/>`).join('')}</g>`;
+    // seed ring: a soft caramel core with a halo of tiny seeds (no "face" read)
+    svg += dots(bananas.map(([x, y]) => [x, y]), '#D9B460', 9, ' opacity=".55"') +
+      dots(bananas.flatMap(([x, y]) => Array.from({ length: 6 }, (_, q) => [x + Math.cos(q * 1.047) * 5.5, y + Math.sin(q * 1.047) * 3.6])), '#8C6A2E', 1.6, ' opacity=".7"');
+    // chocolate lapping over the slices' upper and lower edges
+    const lap = (v, sgn) => { const p = []; for (let j = 0; j <= 24; j++) { const u = -1.02 + (2.04 * j) / 24; const [x, y] = P(u, v); p.push([x, y + sgn * 5 * Math.abs(Math.sin(u * 14))]); } return p; };
+    const lt = lap(0.2, 1), lb = lap(0.82, -1);
+    svg += `<path d="${smooth([...lt, ...lt.slice().reverse().map(([x, y]) => [x, y - 14])])}" fill="#5A2A14"/><path d="${smooth([...lb, ...lb.slice().reverse().map(([x, y]) => [x, y + 14])])}" fill="#3A1A0A"/>`;
     // chocolate swirls lapping over the banana slices
-    svg += sauceRibbons(c, (u, v) => P(u, v < 0.5 ? 0.12 : 0.9), 3, '#4A2212', '#C98A60');
     svg += gloss(Array.from({ length: 7 }, () => { const [x, y] = P(between(rand, -0.95, 0.75), between(rand, 0.15, 0.3)); return [x, y, between(rand, 8, 18), 0]; }), 2.2, 0.55);
   }
   // shadow under the top crumb
@@ -364,12 +373,13 @@ function cutFace(c, o, G, sFace) {
   const { D, rand } = c;
   let svg = '';
   if (o.bread === 'tortilla') {
-    svg += use(sFace, D.lin('tort', [[0, '#C98A44'], [0.12, '#F6E1B0'], [0.7, '#F1D7A0'], [1, '#D7A762']]), ` filter="${D.grain('tort', { freq: 1.1, amount: 0.12 })}"`);
+    svg += use(sFace, D.lin('tort', [[0, '#B8732E'], [0.08, '#EFCB86'], [0.5, '#F4DCA6'], [1, '#CF9550']]), ` filter="${D.grain('tort', { freq: 1.1, amount: 0.12 })}"`) +
+      use(sFace, 'none', ' stroke="#B97A36" stroke-width="2.4"');
     const ti = o.rim ?? 8;
-    const I = { hw: G.hw - 6, yt: (u) => G.yt(u) + ti, yb: (u) => G.yb(u) - ti - 4 };
-    const sIn = D.shape(`in${o.k}`, smooth(outline(I.hw, I.yt, I.yb, G.capX * 0.55)));
+    const I = { hw: G.hw - 2, yt: (u) => G.yt(u) + ti, yb: (u) => G.yb(u) - ti - 3 };
+    const sIn = D.shape(`in${o.k}`, smooth(outline(I.hw, I.yt, I.yb, G.capX * 0.8)));
     const yA = G.yt(0), yB = 0;
-    let inner = use(sIn, D.lin('sauce', [[0, '#FFE592'], [0.55, '#F9C244'], [1, '#E2952A']], [0, n0(yA), 0, n0(yB)], true));
+    let inner = use(sIn, D.lin('sauce', [[0, '#FFEDB0'], [0.5, '#FCCF5A'], [1, '#EFA33A']], [0, n0(yA), 0, n0(yB)], true));
     inner += tacoFilling(c, o, I);
     inner += use(sIn, 'none', ` stroke="#4A1F06" stroke-width="16" stroke-opacity=".45" transform="translate(0 5)" filter="${D.blur(4)}"`);
     svg += `<g clip-path="${D.clip(`inc${o.k}`, [sIn])}">${inner}</g>`;
@@ -395,24 +405,26 @@ function cutFace(c, o, G, sFace) {
   return svg;
 }
 
-/** Sauce / cheese / chocolate drips running from a face down over its rim. Local coords. */
+/** Sauce / cheese / chocolate overflowing the lower rim of a face: a smooth bump narrowing into a drip. Local coords. */
 function drips(c, o, G, yFrom, list, pal) {
   const { D } = c;
-  let svg = '';
+  let shapes = '';
+  const glints = [];
   for (const { u, w, len } of list) {
-    const x0 = u * G.hw, top = yFrom(u) - 3, pts = [];
-    const bottom = G.yb(u) + len;
-    for (let j = 0; j <= 10; j++) { const x = x0 - w * 1.8 + (w * 3.6 * j) / 10; pts.push([x, top]); }
-    for (let j = 10; j >= 0; j--) {
-      const x = x0 - w * 1.8 + (w * 3.6 * j) / 10, g = Math.exp(-(((x - x0) / (w * 0.75)) ** 2));
-      pts.push([x, top + (bottom - top) * g ** 0.6 + 2]);
+    const x0 = u * G.hw, half = w * 1.8, rim = G.yb(u) + 1, tipR = w * 0.6, pts = [];
+    const bottom = rim + len;
+    for (let j = 0; j <= 8; j++) { const x = x0 - half + (2 * half * j) / 8; pts.push([x, yFrom(x / G.hw)]); }
+    for (let j = 16; j >= 0; j--) {
+      const x = x0 - half + (2 * half * j) / 16, t = (x - x0) / half, yf = yFrom(x / G.hw);
+      const env = Math.max(0, Math.cos((Math.PI * Math.min(1, Math.abs(t))) / 2)) ** 2.5, g = Math.exp(-(((x - x0) / (w * 0.62)) ** 4));
+      pts.push([x, yf + (G.yb(x / G.hw) + 1 - yf) * env + (bottom - tipR - rim) * g]);
     }
-    const tipR = w * 0.62;
-    const d = smooth(pts) + `M${n0(x0 - tipR)} ${n0(bottom - tipR * 0.4)}a${r1(tipR)} ${r1(tipR)} 0 1 0 ${r1(tipR * 2)} 0a${r1(tipR)} ${r1(tipR)} 0 1 0 ${r1(-tipR * 2)} 0Z`;
-    svg += `<path d="${d}" fill="${D.lin(`drip-${pal.name}`, [[0, pal.c[0]], [0.5, pal.c[1]], [1, pal.c[2]]])}" filter="${D.bevel(`drip-${pal.name}`, { b: 2.4, o: 1.6, hi: 0.75, lo: 0.3 })}"/>`;
-    svg += gloss([[x0 - tipR * 0.4, bottom - tipR * 0.75, 0.2, 2], [x0 - w * 0.35, top + 6, 0, Math.max(0, (bottom - top) * 0.45)]], 2.4, 0.85);
+    shapes += smooth(pts) + `M${n0(x0 - tipR)} ${n0(bottom - tipR)}a${r1(tipR)} ${r1(tipR)} 0 1 0 ${r1(tipR * 2)} 0a${r1(tipR)} ${r1(tipR)} 0 1 0 ${r1(-tipR * 2)} 0Z`;
+    if (o.pool && false) shapes += `M${n0(x0 - w * 2.2)} ${n0(bottom - 2)}a${r1(w * 2.2)} ${r1(tipR * 0.55)} 0 1 0 ${r1(w * 4.4)} 0a${r1(w * 2.2)} ${r1(tipR * 0.55)} 0 1 0 ${r1(-w * 4.4)} 0Z`;
+    glints.push([x0 - tipR * 0.45, bottom - tipR * 1.3, 0.2, 2], [x0 - half * 0.4, rim - 3, half * 0.3, 1], [x0 - w * 0.3, rim + 4, 0, Math.max(0, len - tipR * 2.2)]);
   }
-  return svg;
+  return `<path d="${shapes}" fill="${D.lin(`drip-${pal.name}`, [[0, pal.c[0]], [0.5, pal.c[1]], [1, pal.c[2]]])}" filter="${D.bevel(`drip-${pal.name}`, { b: 2.4, o: 1.6, hi: pal.hi ?? 0.6, lo: 0.14 })}"/>` +
+    dots(glints, pal.g ?? '#FFFFFF', 2.4, ` opacity="${pal.go ?? 0.85}"`);
 }
 
 /* ------------------------------------------------------------------ wedge + item */
@@ -421,9 +433,9 @@ function wedge(c, o) {
   const { D } = c;
   const G = geo(o);
   const sTop = D.shape(`top${o.k}`, smooth(G.topPts)), sFace = D.shape(`face${o.k}`, smooth(G.face));
-  let svg = topFace(c, o, G, sTop) + cutFace(c, o, G, sFace);
+  let svg = topFace(c, o, G, sTop) + cutFace(c, o, G, sFace) + (o.gratin ? gratin(c, G, o.k) : '');
   if (o.drips) {
-    const yFrom = o.bread === 'tortilla' ? (u) => G.yb(u) - (o.rim ?? 8) - 12 : (u) => o._band(u)[1] - 4;
+    const yFrom = o.bread === 'tortilla' ? (u) => G.yb(u) - (o.rim ?? 8) - 10 : (u) => o._band(Math.max(-1, Math.min(1, u)))[1] - 5;
     svg += drips(c, o, G, yFrom, o.drips, o.dripPal);
   }
   return { svg: `<g transform="${tfOf(o)}">${svg}</g>`, G, sTop, sFace };
@@ -437,20 +449,23 @@ function ground(id, D, cx, cy, rx) {
 
 /** Melted strands stretching from the top half's filling down to the bottom half's. Absolute coords. */
 function strands(c, list, pal) {
-  const { D } = c;
-  return list.map(([a, b, wa, wb]) => {
-    const mx = (a[0] + b[0]) / 2 + 4, my = (a[1] + b[1]) / 2, wm = Math.min(wa, wb) * 0.28;
-    const L = [[a[0] - wa, a[1]], [mx - wm, my], [b[0] - wb, b[1]]], R = [[b[0] + wb, b[1]], [mx + wm, my + 2], [a[0] + wa, a[1]]];
-    const d = `M${n0(L[0][0])} ${n0(L[0][1])}Q${n0(L[1][0])} ${n0(L[1][1])} ${n0(L[2][0])} ${n0(L[2][1])}L${n0(R[0][0])} ${n0(R[0][1])}Q${n0(R[1][0])} ${n0(R[1][1])} ${n0(R[2][0])} ${n0(R[2][1])}Z`;
-    return `<path d="${d}" fill="${D.lin(`str-${pal.name}`, [[0, pal.c[0]], [0.5, pal.c[1]], [1, pal.c[2]]], [0, 0, 1, 0])}"/>` +
-      `<path d="M${n0(a[0] - wa * 0.45)} ${n0(a[1] + 4)}Q${n0(mx - wm * 0.4)} ${n0(my)} ${n0(b[0] - wb * 0.5)} ${n0(b[1] - 6)}" fill="none" stroke="#FFFBEA" stroke-width="1.8" opacity=".8"/>`;
-  }).join('');
+  const { D, rand } = c;
+  const fill = D.lin(`str-${pal.name}`, [[0, pal.c[0]], [0.5, pal.c[1]], [1, pal.c[2]]], [0, 0, 1, 0]);
+  let d = '', hl = '';
+  for (const [a, b, wa, wb] of list) {
+    const sway = between(rand, -14, 14), wm = Math.min(wa, wb) * 0.32;
+    const m = [(a[0] + b[0]) / 2 + sway, a[1] + (b[1] - a[1]) * 0.58];
+    d += `M${n0(a[0] - wa)} ${n0(a[1] - 2)}C${n0(a[0] - wa * 0.5)} ${n0(a[1] + 12)} ${n0(m[0] - wm)} ${n0(m[1] - 14)} ${n0(m[0] - wm)} ${n0(m[1])}S${n0(b[0] - wb * 0.6)} ${n0(b[1] - 10)} ${n0(b[0] - wb)} ${n0(b[1] + 2)}` +
+      `L${n0(b[0] + wb)} ${n0(b[1] + 2)}C${n0(b[0] + wb * 0.5)} ${n0(b[1] - 10)} ${n0(m[0] + wm)} ${n0(m[1] + 14)} ${n0(m[0] + wm)} ${n0(m[1])}S${n0(a[0] + wa * 0.6)} ${n0(a[1] + 12)} ${n0(a[0] + wa)} ${n0(a[1] - 2)}Z`;
+    hl += `M${n0(a[0] - wa * 0.4)} ${n0(a[1] + 6)}Q${n0(m[0] - wm * 0.3)} ${n0(m[1] - 10)} ${n0(m[0] - wm * 0.4)} ${n0(m[1] + 8)}`;
+  }
+  return `<path d="${d}" fill="${fill}" filter="${D.bevel('str', { b: 1.6, o: 1, hi: 0.6, lo: 0.2 })}"/><path d="${hl}" fill="none" stroke="#FFFBEA" stroke-width="1.8" stroke-linecap="round" opacity=".8"/>`;
 }
 
 const PAL = {
   sauce: { name: 'sauce', c: ['#FFE38A', '#F9C143', '#E8982C'] },
   cheese: { name: 'cheese', c: ['#FFF0B8', '#FCD064', '#EFA53A'] },
-  choc: { name: 'choc', c: ['#6E3A1C', '#4A2212', '#2C1208'] },
+  choc: { name: 'choc', c: ['#6E3A1C', '#55280F', '#3A1A0A'], g: '#E8B48C', go: 0.7, hi: 0.22 },
 };
 
 function item(id, spec) {
@@ -476,40 +491,40 @@ function item(id, spec) {
 
 /* ------------------------------------------------------------------ menu */
 
-const TACO = { bread: 'tortilla', taper: 0.42, bulge: 6, bow: 14, rim: 8 };
+const TACO = { bread: 'tortilla', taper: 0.42, bulge: 6, bow: 14, rim: 6 };
 const PANINI = { bread: 'panini', taper: 0.3, bulge: 4, bow: 9 };
 
 export const art = {
   'tacos-classique': () => item('tacos-classique', {
-    base: { ...TACO, fries: 9, ends: 5, meat: [{ t: 'chicken', n: 11, r: [13, 19] }], dripPal: PAL.sauce },
-    bottom: { x: 386, y: 588, w: 560, h: 108, depth: 126, apexU: 0.18, drips: [{ u: -0.42, w: 10, len: 14 }, { u: 0.3, w: 12, len: 20 }] },
-    top: { x: 420, y: 448, w: 536, h: 104, depth: 118, apexU: -0.12, rot: -4, drips: [{ u: -0.5, w: 11, len: 22 }, { u: 0.12, w: 13, len: 30 }, { u: 0.62, w: 9, len: 14 }] },
+    base: { ...TACO, fries: 13, ends: 5, meatGap: 40, meat: [{ t: 'chicken', n: 12, r: [21, 28] }], dripPal: PAL.sauce },
+    bottom: { x: 386, y: 604, w: 570, h: 150, depth: 104, apexU: 0.18, drips: [{ u: -0.42, w: 11, len: 2 }, { u: 0.3, w: 13, len: 6 }] },
+    top: { x: 420, y: 420, w: 548, h: 144, depth: 98, apexU: -0.12, rot: -4, drips: [{ u: -0.5, w: 12, len: 22 }, { u: 0.12, w: 15, len: 30 }, { u: 0.62, w: 10, len: 14 }] },
   }),
   'tacos-gratine': () => item('tacos-gratine', {
-    base: { ...TACO, gratin: true, fries: 9, ends: 5, meat: [{ t: 'chicken', n: 11, r: [13, 19] }], dripPal: PAL.sauce },
-    bottom: { x: 386, y: 588, w: 560, h: 108, depth: 126, apexU: 0.18, drips: [{ u: 0.36, w: 12, len: 20 }] },
-    top: { x: 420, y: 448, w: 536, h: 104, depth: 118, apexU: -0.12, rot: -4, drips: [{ u: -0.44, w: 11, len: 24 }, { u: 0.4, w: 12, len: 22 }] },
+    base: { ...TACO, gratin: true, fries: 13, ends: 5, meatGap: 40, meat: [{ t: 'chicken', n: 12, r: [21, 28] }], dripPal: PAL.sauce },
+    bottom: { x: 386, y: 604, w: 570, h: 150, depth: 104, apexU: 0.18, drips: [{ u: 0.36, w: 14, len: 12 }] },
+    top: { x: 420, y: 420, w: 548, h: 144, depth: 98, apexU: -0.12, rot: -4, drips: [{ u: -0.44, w: 12, len: 24 }, { u: 0.4, w: 13, len: 22 }] },
   }),
   'tacos-xl': () => item('tacos-xl', {
-    base: { ...TACO, fries: 9, ends: 4, meatGap: 30, meat: [{ t: 'chicken', n: 6, r: [13, 18] }, { t: 'beef', n: 5, r: 15 }, { t: 'merguez', n: 6, r: [12, 15] }], dripPal: PAL.sauce },
-    bottom: { x: 384, y: 596, w: 600, h: 120, depth: 136, apexU: 0.18, drips: [{ u: -0.3, w: 12, len: 18 }, { u: 0.45, w: 11, len: 14 }] },
-    top: { x: 426, y: 452, w: 572, h: 116, depth: 126, apexU: -0.16, rot: -9, drips: [{ u: -0.2, w: 13, len: 30 }, { u: 0.5, w: 10, len: 18 }] },
+    base: { ...TACO, fries: 12, ends: 3, meatGap: 40, meat: [{ t: 'chicken', n: 6, r: [21, 26] }, { t: 'beef', n: 6, r: 22 }, { t: 'merguez', n: 7, r: [17, 20] }], dripPal: PAL.sauce },
+    bottom: { x: 384, y: 612, w: 612, h: 164, depth: 106, apexU: 0.18, drips: [{ u: -0.3, w: 14, len: 10 }, { u: 0.45, w: 12, len: 10 }] },
+    top: { x: 428, y: 420, w: 580, h: 154, depth: 98, apexU: -0.16, rot: -8, drips: [{ u: -0.2, w: 15, len: 30 }, { u: 0.5, w: 11, len: 18 }] },
   }),
   'panini-trois-fromages': () => item('panini-trois-fromages', {
     base: { ...PANINI, fill: 'cheese', dripPal: PAL.cheese },
-    bottom: { x: 388, y: 574, w: 590, h: 74, depth: 128, apexU: 0.16, drips: [{ u: -0.55, w: 9, len: 16 }, { u: 0.1, w: 11, len: 22 }, { u: 0.62, w: 8, len: 12 }] },
-    top: { x: 416, y: 438, w: 566, h: 72, depth: 122, apexU: -0.12, rot: -3, drips: [] },
-    strands: [[-0.62, -0.66, 9, 11], [-0.22, -0.2, 7, 9], [0.18, 0.24, 10, 12], [0.58, 0.62, 7, 9]],
+    bottom: { x: 388, y: 590, w: 600, h: 112, depth: 112, apexU: 0.16, drips: [{ u: -0.55, w: 10, len: 12 }, { u: 0.1, w: 12, len: 14 }, { u: 0.62, w: 9, len: 10 }] },
+    top: { x: 414, y: 424, w: 576, h: 106, depth: 104, apexU: -0.12, rot: -3, drips: [] },
+    strands: [[-0.7, -0.74, 8, 10], [-0.38, -0.36, 10, 12], [-0.05, -0.02, 7, 9], [0.27, 0.3, 11, 13], [0.6, 0.64, 7, 9]],
     strandPal: PAL.cheese,
   }),
   'panini-poulet': () => item('panini-poulet', {
     base: { ...PANINI, fill: 'poulet', dripPal: PAL.cheese },
-    bottom: { x: 388, y: 574, w: 590, h: 76, depth: 128, apexU: 0.16, drips: [{ u: -0.36, w: 9, len: 16 }, { u: 0.52, w: 10, len: 18 }] },
-    top: { x: 416, y: 446, w: 566, h: 74, depth: 122, apexU: -0.12, rot: -3, drips: [{ u: 0.06, w: 9, len: 18 }] },
+    bottom: { x: 388, y: 590, w: 600, h: 116, depth: 112, apexU: 0.16, drips: [{ u: -0.36, w: 10, len: 12 }, { u: 0.52, w: 11, len: 12 }] },
+    top: { x: 414, y: 430, w: 576, h: 100, depth: 112, apexU: -0.12, rot: -3, drips: [{ u: 0.06, w: 10, len: 20 }] },
   }),
   'panini-choco': () => item('panini-choco', {
     base: { ...PANINI, fill: 'choc', sugar: true, dripPal: PAL.choc },
-    bottom: { x: 388, y: 574, w: 590, h: 72, depth: 128, apexU: 0.16, drips: [{ u: -0.48, w: 9, len: 18 }, { u: 0.28, w: 10, len: 22 }] },
-    top: { x: 416, y: 446, w: 566, h: 70, depth: 122, apexU: -0.12, rot: -3, drips: [{ u: -0.1, w: 9, len: 20 }, { u: 0.55, w: 8, len: 12 }] },
+    bottom: { x: 388, y: 590, w: 600, h: 112, depth: 112, apexU: 0.16, drips: [{ u: -0.48, w: 10, len: 12 }, { u: 0.28, w: 11, len: 14 }] },
+    top: { x: 414, y: 430, w: 576, h: 106, depth: 104, apexU: -0.12, rot: -3, drips: [{ u: -0.1, w: 10, len: 22 }, { u: 0.55, w: 9, len: 14 }] },
   }),
 };
