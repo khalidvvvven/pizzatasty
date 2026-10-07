@@ -213,7 +213,7 @@ function pepper(rand, cx, cy, rad, n) {
 }
 
 function chickenSym(D) {
-  const len = 142, wid = 46, pts = [];
+  const len = 150, wid = 48, pts = [];
   for (let k = 0; k < 24; k++) {
     const a = (k / 24) * TAU, c = Math.cos(a), s = Math.sin(a);
     const x = Math.sign(c) * Math.abs(c) ** 0.45 * (len / 2), u = x / (len / 2);
@@ -270,10 +270,17 @@ function tomatoSyms(D) {
 }
 
 function walnutSym(D) {
+  const pts = [];
+  for (let i = 0; i < 32; i++) {
+    const a = (i / 32) * TAU, notch = 5 * Math.exp(-(((Math.abs(Math.sin(a)) - 1) / 0.06) ** 2) / 1);
+    const rr = 25 * (1 - 0.09 * Math.cos(4 * a)) + 1.4 * Math.cos(9 * a) - (Math.abs(Math.sin(a)) > 0.97 ? notch : 0);
+    pts.push([Math.cos(a) * rr * 1.22, Math.sin(a) * rr]);
+  }
   return D.sym('wal',
-    `<path d="M0 -19C10 -27 27 -22 29 -8C32 3 26 17 14 21C8 23 3 18 0 22C-3 18-8 23-14 21C-26 17-32 3-29 -8C-27 -22-10 -27 0 -19Z" fill="${D.rad('walg', [[0, '#E2B373'], [0.55, '#B17738'], [1, '#6E3F17']], { cx: 0.38, cy: 0.32, r: 0.75 })}"/>` +
-    `<path d="M0 -19C-3 -6 3 8 0 22M-27 -3C-19 -8-12 2-5 -5M-23 12C-17 5-10 13-5 8M27 -3C19 -8 12 2 5 -5M23 12C17 5 10 13 5 8M-14 -20C-12 -12-19 -9-22 -5M14 -20C12 -12 19 -9 22 -5" stroke="#4E270B" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".75"/>` +
-    `<path d="M-23 -11C-17 -18-9 -19-5 -14M7 -16C13 -21 20 -17 23 -11M-24 4C-20 0-15 4-12 1" stroke="#F8DCA6" stroke-width="2" fill="none" stroke-linecap="round" opacity=".75"/>`);
+    `<path d="${smooth(pts, true, 1)}" fill="${D.rad('walg', [[0, '#E8BC7C'], [0.5, '#C08240'], [1, '#7A4416']], { cx: 0.4, cy: 0.35, r: 0.75 })}"/>` +
+    `<path d="M0 -24C-4 -8 4 8 0 24M-30 1C-22 -5-14 5-6 -1M30 1C22 -5 14 5 6 -1" stroke="#3E1C06" stroke-width="3.6" fill="none" stroke-linecap="round" opacity=".85"/>` +
+    `<path d="M-22 -16C-18 -10-24 -6-26 -8M-12 -20C-10 -14-14 -10-10 -6M22 -16C18 -10 24 -6 26 -8M12 -20C10 -14 14 -10 10 -6M-20 14C-16 8-10 14-12 18M20 14C16 8 10 14 12 18M-24 6C-20 10-26 12-28 10M24 6C20 10 26 12 28 10" stroke="#5A2E0C" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>` +
+    `<path d="M-26 -10C-22 -18-14 -21-8 -18M6 -19C12 -22 20 -18 24 -12M-25 9C-20 4-14 8-10 5M8 6C12 3 18 5 22 8" stroke="#FBE0AC" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".7"/>`);
 }
 
 function caesarTop({ D, rand, cx, cy, Ri }) {
@@ -282,7 +289,7 @@ function caesarTop({ D, rand, cx, cy, Ri }) {
   const fx = cx + 62, fy = cy - 18, ang = (-58 * Math.PI) / 180, nx = -Math.sin(ang), ny = Math.cos(ang);
   let chick = '';
   for (let i = 0; i < 5; i++) {
-    const o = (i - 2) * 44, sl = (i - 2) * 10;
+    const o = (i - 2) * 46, sl = (i - 2) * 10;
     chick += place(ck, fx + nx * o + Math.cos(ang) * sl + between(rand, -4, 4), fy + ny * o + Math.sin(ang) * sl + between(rand, -4, 4), deg(ang) + between(rand, -6, 6), between(rand, 0.95, 1.05));
   }
   const cpts = scatterInCircle(rand, { cx, cy, radius: Ri - 56, count: 40, minDist: 72 }).filter((p) => Math.hypot(p.x - fx, p.y - fy) > 140).slice(0, 10);
@@ -301,8 +308,8 @@ function chevreTop({ D, rand, cx, cy, Ri }) {
     `<ellipse rx="70" ry="57" fill="${D.rad('crust', [[0, '#D9A05A'], [0.72, '#A9622A'], [1, '#713812']], { cx: 0.4, cy: 0.38, r: 0.62 })}"/>` +
     `<ellipse cx="-2" cy="-3" rx="61" ry="48" fill="${D.rad('crumb', [[0, '#FBE8BA'], [0.8, '#EDC682'], [1, '#C98A42']])}"/>` +
     dots([[-48, -18], [-44, 14], [48, -12], [42, 22], [-30, 34], [30, -36], [-20, -40], [52, 4]], '#C98A42', 4, ' opacity=".7"') +
-    `<circle cx="4" cy="4" r="52" fill="#D8C4A2"/><circle cx="-1" cy="-1" r="50" fill="${D.rad('chev', [[0, '#C9721F'], [0.28, '#E3A048'], [0.55, '#F4D08E'], [0.82, '#FDF1D8'], [1, '#F3E7D2']], { cx: 0.46, cy: 0.44, r: 0.55 })}"/>` +
-    `<ellipse cx="8" cy="4" rx="12" ry="8" fill="#A9541A" opacity=".4"/><ellipse cx="-12" cy="12" rx="9" ry="6" fill="#A9541A" opacity=".35"/><ellipse cx="14" cy="-14" rx="7" ry="5" fill="#A9541A" opacity=".35"/><ellipse cx="-16" cy="-4" rx="5" ry="4" fill="#A9541A" opacity=".3"/>` +
+    `<circle cx="4" cy="4" r="52" fill="#D8C4A2"/><circle cx="-1" cy="-1" r="50" fill="${D.rad('chev', [[0, '#EDB863'], [0.45, '#F2C77C'], [0.72, '#F9E2B2'], [0.9, '#FFF6E4'], [1, '#F1E4CC']], { cx: 0.45, cy: 0.43, r: 0.55 })}"/>` +
+    `<g fill="${D.rad('spot', [[0, '#A9541A', 0.75], [0.6, '#C26E24', 0.4], [1, '#C26E24', 0]])}"><ellipse cx="8" cy="4" rx="15" ry="10"/><ellipse cx="-14" cy="12" rx="12" ry="8"/><ellipse cx="14" cy="-16" rx="10" ry="7"/><ellipse cx="-14" cy="-10" rx="9" ry="7"/><ellipse cx="22" cy="16" rx="8" ry="6"/><ellipse cx="-2" cy="-28" rx="8" ry="5"/><ellipse cx="-28" cy="2" rx="6" ry="5"/></g>` +
     `<ellipse cx="-20" cy="-22" rx="14" ry="6" transform="rotate(-35 -20 -22)" fill="#fff" opacity=".6"/>` +
     dots([[-6, -24, 2, 1], [20, 10, 2, -1], [-22, 4, 1, 2], [4, 22, 2, 0]], '#5D7A2A', 2.6));
   const { whole, half } = tomatoSyms(D), wal = walnutSym(D);
@@ -314,12 +321,11 @@ function chevreTop({ D, rand, cx, cy, Ri }) {
   let toms = '', wals = '';
   for (let i = 0; i < 6; i++) { const a = a0 - Math.PI / 2 + (i * TAU) / 6 + Math.PI / 3 + between(rand, -0.15, 0.15), d = i % 2 ? 196 : 212; toms += place(i % 3 === 1 ? whole : half, cx + Math.cos(a) * d, cy + Math.sin(a) * d, between(rand, 0, 360), between(rand, 0.95, 1.1)); }
   for (let i = 0; i < 7; i++) { const a = a0 + (i * TAU) / 7 + between(rand, -0.15, 0.15), d = between(rand, 168, 232); wals += place(wal, cx + Math.cos(a) * d, cy + Math.sin(a) * d, between(rand, 0, 360), between(rand, 1.15, 1.3)); }
-  const hp = [[tp[0][0] - 60, tp[0][1] - 10], [tp[0][0] + 20, tp[0][1] + 18], [tp[1][0], tp[1][1] - 10], [tp[2][0] - 10, tp[2][1] + 20], [tp[2][0] + 40, tp[2][1] - 15]];
-  hp.sort((p, q) => p[0] - q[0]);
   const honey = (pts, w) => { const d = smooth(pts, false); return `<path d="${d}" fill="none" stroke="#6A3002" stroke-width="${w + 4}" stroke-linecap="round" opacity=".35" transform="translate(3 5)" filter="${D.blur(2.5)}"/><path d="${d}" fill="none" stroke="#E0900F" stroke-width="${w}" stroke-linecap="round" opacity=".95"/><path d="${d}" fill="none" stroke="#F7B733" stroke-width="${w * 0.55}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#FFF2C0" stroke-width="2" stroke-linecap="round" transform="translate(-1.5 -1.5)"/>`; };
   return `<g filter="${D.bevel()}">${wals}</g><g filter="${D.bevel('bvt', { b: 2, o: 1.5, hi: 0.5, lo: 0.35, ds: 0.45 })}">${toms}</g>` +
     `<g filter="${D.bevel('bvk', { b: 3, o: 2, ds: 0.55, dsB: 5, dx: 5, dy: 8 })}">${toasts}</g>` +
-    honey(hp, 8) + honey(hp.slice(1, 4).map(([x, y], i) => [x + 22, y + (i % 2 ? -30 : 26)]), 5) +
+    tp.map(([x, y]) => { const a = between(rand, -0.5, 0.5), c = Math.cos(a), sn = Math.sin(a), P = (u, v) => [x + u * c - v * sn, y + u * sn + v * c];
+      return honey([P(-62, -6), P(-30, -18), P(0, -2), P(28, 12), P(64, 2)], 6.5) + honey([P(-40, 22), P(-8, 10), P(30, 26)], 4.5); }).join('') +
     pepper(rand, cx, cy, Ri - 40, 40);
 }
 
@@ -334,16 +340,22 @@ function thonTop({ D, rand, cx, cy, Ri }) {
   const olive = D.sym('olive',
     `<path d="${circleD(0, 0, 13)}${circleD(0, 0, 5.5)}" fill-rule="evenodd" fill="${D.rad('olg', [[0, '#6E5A66'], [0.55, '#2E2329'], [1, '#120C10']], { cx: 0.38, cy: 0.35, r: 0.7 })}"/>` +
     `<path d="M-9 -4A10 10 0 0 1 -2 -10" stroke="#fff" stroke-opacity=".65" stroke-width="2.4" fill="none" stroke-linecap="round"/>`);
-  // flaked tuna: a heap of soft chunks, each built from 2-3 overlapping lighter flakes
-  let tuna = '';
-  const chunks = scatterInCircle(rand, { cx: cx - 6, cy: cy + 4, radius: 74, count: 13, minDist: 34 });
+  // flaked tuna: an irregular heap; each chunk has short fibre lines along its own grain direction
+  let tuna = '', fl = '', fd = '';
+  const chunks = scatterInCircle(rand, { cx: cx - 6, cy: cy + 4, radius: 70, count: 15, minDist: 28 });
   chunks.sort((p, q) => p.y - q.y);
-  const tg = [D.rad('tuna', [[0, '#F3D8BE'], [0.55, '#D7A784'], [1, '#A06A4A']], { cx: 0.38, cy: 0.32, r: 0.75 }), D.rad('tuna2', [[0, '#FBE9D8'], [0.6, '#E6C0A0'], [1, '#C08A66']], { cx: 0.35, cy: 0.3, r: 0.8 })];
-  const flake = (x, y, rr, f) => { const pts = []; for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU, q = rr * between(rand, 0.72, 1.12); pts.push([x + Math.cos(a) * q * 1.25, y + Math.sin(a) * q * 0.8]); } return `<path d="${smooth(pts)}" fill="${f}"/>`; };
+  const tg = D.rad('tuna', [[0, '#F6DCBC'], [0.55, '#DDAD82'], [1, '#A87050']], { cx: 0.36, cy: 0.3, r: 0.78 });
   for (const p of chunks) {
-    const rr = between(rand, 22, 30);
-    tuna += flake(p.x, p.y, rr, tg[0]) + flake(p.x - rr * 0.25, p.y - rr * 0.3, rr * 0.62, tg[1]) + (rand() < 0.6 ? flake(p.x + rr * 0.35, p.y + rr * 0.05, rr * 0.45, tg[1]) : '');
+    const rr = between(rand, 20, 29), g = rand() * Math.PI, c = Math.cos(g), sn = Math.sin(g), pts = [];
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU, q = rr * between(rand, 0.7, 1.15), u = Math.cos(a) * q * 1.3, v = Math.sin(a) * q * 0.8; pts.push([p.x + u * c - v * sn, p.y + u * sn + v * c]); }
+    tuna += `<path d="${smooth(pts)}" fill="${tg}"/>`;
+    for (const k of [-0.42, 0, 0.4]) {
+      const ox = p.x - sn * k * rr, oy = p.y + c * k * rr, l = rr * between(rand, 0.5, 0.9), b = between(rand, -3, 3);
+      fl += `M${n0(ox - c * l - 1)} ${n0(oy - sn * l - 1.5)}q${n0(c * l - sn * b)} ${n0(sn * l + c * b)} ${n0(2 * c * l)} ${n0(2 * sn * l)}`;
+      if (k === 0) fd += `M${n0(ox - c * l * 0.8 + 1)} ${n0(oy - sn * l * 0.8 + 3)}l${n0(1.6 * c * l)} ${n0(1.6 * sn * l)}`;
+    }
   }
+  tuna += `<path d="${fd}" stroke="#8E5636" stroke-width="2" fill="none" stroke-linecap="round" opacity=".45"/><path d="${fl}" stroke="#FFF1DE" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".8"/>`;
   let eggs = '', toms = '', olives = '';
   const a0 = between(rand, 0, TAU);
   const used = [];
@@ -732,7 +744,7 @@ function brownieTop(D, rand, B, name) {
   s += `<path d="${flakes}" fill="#A26C46" opacity=".35"/>` +
     `<path d="${cracks}" stroke="#C99468" stroke-width="2" fill="none" opacity=".55" transform="translate(-2 -2)" stroke-linejoin="round"/>` +
     `<path d="${cracks}" stroke="#241006" stroke-width="2.6" fill="none" opacity=".75" stroke-linejoin="round"/>` +
-    `<ellipse cx="${n0(-hw * 0.35)}" cy="${n0(-hw * 0.3)}" rx="${n0(hw * 0.55)}" ry="${n0(hw * 0.35)}" fill="#fff" opacity=".14" filter="${D.blur(10)}"/>` +
+    `<ellipse cx="${n0(-hw * 0.3)}" cy="${n0(-hw * 0.25)}" rx="${n0(hw * 0.6)}" ry="${n0(hw * 0.3)}" transform="rotate(-40 ${n0(-hw * 0.3)} ${n0(-hw * 0.25)})" fill="#FFE8D0" opacity=".2" filter="${D.blur(9)}"/>` +
     `<path d="M${-hw} ${hw}H${hw}M${-hw} ${-hw}V${hw}" stroke="#B98258" stroke-width="3" stroke-linecap="round" opacity=".5"/>`;
   return `<g transform="${B.top}">${s}</g>`;
 }
@@ -759,7 +771,7 @@ function brownie(id) {
 export const art = {
   cesar: () => salad('cesar', {
     bowl: 'cream',
-    greens: { mix: [{ kind: 'romaine', w: 3 }, { kind: 'romaine2', w: 2 }], ring: 13, count: 22, minDist: 64, per: 9, scale: [0.82, 1.08] },
+    greens: { mix: [{ kind: 'romaine', w: 3 }, { kind: 'romaine2', w: 2 }], ring: 14, count: 26, minDist: 58, per: 10, scale: [0.82, 1.08] },
     top: caesarTop,
   }),
   'chevre-chaud': () => salad('chevre-chaud', {
@@ -769,7 +781,7 @@ export const art = {
   }),
   'salade-thon': () => salad('salade-thon', {
     bowl: 'creamBand',
-    greens: { mix: [{ kind: 'romaine2', w: 2, s: 0.75 }, { kind: 'oak', w: 3 }, { kind: 'mache', w: 1, s: 1.3 }], ring: 15, count: 36, minDist: 48, per: 12, scale: [0.9, 1.15] },
+    greens: { mix: [{ kind: 'romaine2', w: 2, s: 0.75 }, { kind: 'oak', w: 3 }, { kind: 'mache', w: 1, s: 1.3 }], ring: 16, count: 44, minDist: 42, per: 12, scale: [0.9, 1.15] },
     top: thonTop,
   }),
   cola: () => cola('cola'),
